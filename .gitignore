@@ -6,6 +6,10 @@ __pycache__/
 .venv/
 venv/
 
+# Dependency folders
+node_modules/
+scripts/node_modules/
+
 # Streamlit / local runtime
 .streamlit/
 
