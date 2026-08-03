@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Streamlit / local runtime
+.streamlit/
+
+# Large/generated weather data
+*.grib
+*.grib.idx
+*.nc
+*.zip
+*.csv
+*.xlsx
+*.inspect.ndjson
+
+# Project outputs and working data
+outputs/
+working/
