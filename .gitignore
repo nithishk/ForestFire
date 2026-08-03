@@ -12,6 +12,7 @@ venv/
 # Large/generated weather data
 *.grib
 *.grib.idx
+*.grib.*.idx
 *.nc
 *.zip
 *.csv
