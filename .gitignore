@@ -24,5 +24,13 @@ scripts/node_modules/
 *.inspect.ndjson
 
 # Project outputs and working data
-outputs/
+outputs/*
+!outputs/weather_analysis/
+outputs/weather_analysis/*
+!outputs/weather_analysis/paris_hourly_area_mean.csv
+!outputs/weather_analysis/paris_daily_summary.csv
+!outputs/weather_analysis/germany_hourly_area_mean.csv
+!outputs/weather_analysis/germany_daily_summary.csv
+!outputs/weather_analysis/germany_monthly_summary.csv
+!outputs/weather_analysis/germany_grid_cell_summary.csv
 working/
