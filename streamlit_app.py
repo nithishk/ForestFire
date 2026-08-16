@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from live_pipeline import effis_map_url, fetch_hurtgenwald_history, fetch_hurtgenwald_weather, risk_label
+from sensor_simulation import generate_sensor_demo
 
 
 ROOT = Path(__file__).resolve().parent
@@ -216,6 +217,11 @@ def load_hurtgenwald_history(start_date, end_date):
     return fetch_hurtgenwald_history(start_date, end_date)
 
 
+@st.cache_data(ttl=300)
+def load_sensor_demo(seed: int) -> pd.DataFrame:
+    return generate_sensor_demo(seed=seed)
+
+
 def metric_cards(items: list[tuple[str, str]]) -> None:
     cards = "".join(
         "<div class='metric-card'>"
@@ -350,6 +356,13 @@ def html_table(frame: pd.DataFrame, max_rows: int | None = None, **_: object) ->
     st.markdown(table.to_html(index=False, escape=True, classes="simple-table"), unsafe_allow_html=True)
 
 
+def round_numeric(frame: pd.DataFrame, decimals: int = 2) -> pd.DataFrame:
+    rounded = frame.copy()
+    numeric_cols = rounded.select_dtypes(include="number").columns
+    rounded[numeric_cols] = rounded[numeric_cols].round(decimals)
+    return rounded
+
+
 def insight(text: str) -> None:
     st.markdown(f"<div class='insight-box'><strong>Insight:</strong> {text}</div>", unsafe_allow_html=True)
 
@@ -371,7 +384,7 @@ def friendly_daily_table(frame: pd.DataFrame) -> pd.DataFrame:
                 "wind10_mps_mean": "Average wind (m/s)",
             }
         )
-        .round(2)
+        .pipe(round_numeric)
     )
 
 
@@ -397,8 +410,8 @@ data = load_data()
 
 st.title("Weather Dashboard")
 
-overview_tab, live_nrw_tab, historical_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
-    ["Overview", "Live NRW", "Historical NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
+overview_tab, live_nrw_tab, sensor_demo_tab, historical_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
+    ["Overview", "Live NRW", "Sensor Demo", "Historical NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
 )
 
 with overview_tab:
@@ -520,7 +533,7 @@ with live_nrw_tab:
                         "Wind (km/h)",
                         "Direction",
                     ]
-                ].round(2),
+                ].pipe(round_numeric),
                 use_container_width=True,
                 hide_index=True,
             )
@@ -529,6 +542,97 @@ with live_nrw_tab:
         st.caption(str(exc))
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+
+with sensor_demo_tab:
+    st.subheader("Sensor Demo")
+    st.write("Simulated ground-sensor feed for MVP demo.")
+    note("This tab uses fake sensor data for demonstration. It is not live hardware data yet.")
+
+    scenario = st.selectbox("Demo scenario", ["Normal with one hotspot", "Regenerate sample"], key="sensor_scenario")
+    seed = 42 if scenario == "Normal with one hotspot" else int(pd.Timestamp.now().timestamp()) % 100000
+    sensor_data = load_sensor_demo(seed)
+    latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
+    highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
+
+    metric_cards(
+        [
+            ("Top risk sensor", f"{highest['sensor_id']}"),
+            ("Prediction", highest["prediction"]),
+            ("Fire probability", f"{highest['fire_probability_pct']:.0f}%"),
+            ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
+            ("Wind", f"{highest['wind_kmh']:.1f} km/h"),
+        ]
+    )
+
+    insight(
+        f"{highest['sensor_id']} at {highest['zone']} is the current demo hotspot. "
+        "The score rises when smoke, CO, heat, low humidity, wind, and IR signal move together."
+    )
+
+    left, right = st.columns([2, 1])
+    with left:
+        st.markdown("#### Sensor Network")
+        st.caption("Bigger points show higher predicted fire probability.")
+        sensor_points = latest.rename(columns={"lat": "Latitude", "lon": "Longitude"})
+        svg_scatter_chart(
+            sensor_points,
+            x="Longitude",
+            y="Latitude",
+            size="fire_probability_pct",
+            height=360,
+        )
+    with right:
+        st.markdown("#### Latest Readings")
+        latest_table = latest[
+            [
+                "sensor_id",
+                "zone",
+                "prediction",
+                "fire_probability_pct",
+                "temperature_c",
+                "humidity_pct",
+                "smoke_ppm",
+                "co_ppm",
+                "battery_pct",
+            ]
+        ].rename(
+            columns={
+                "sensor_id": "Sensor",
+                "zone": "Zone",
+                "prediction": "Prediction",
+                "fire_probability_pct": "Fire probability (%)",
+                "temperature_c": "Temp (C)",
+                "humidity_pct": "Humidity (%)",
+                "smoke_ppm": "Smoke (ppm)",
+                "co_ppm": "CO (ppm)",
+                "battery_pct": "Battery (%)",
+            }
+        )
+        html_table(round_numeric(latest_table))
+
+    st.markdown("#### Hotspot Timeline")
+    hotspot_history = sensor_data[sensor_data["sensor_id"] == highest["sensor_id"]].set_index("time")
+    svg_line_chart(
+        hotspot_history[["fire_probability_pct", "temperature_c", "humidity_pct", "smoke_ppm", "co_ppm"]],
+        height=360,
+    )
+
+    st.markdown("#### Prediction Logic")
+    st.write(
+        "The demo score combines weather stress and sensor signals: heat, low humidity, wind, smoke, CO, and flame IR."
+    )
+    rule_table = pd.DataFrame(
+        [
+            ["Heat", "Higher temperature increases risk"],
+            ["Humidity", "Lower humidity increases risk"],
+            ["Wind", "Higher wind supports faster spread"],
+            ["Smoke", "Rising smoke is an early warning signal"],
+            ["CO", "Rising carbon monoxide supports combustion detection"],
+            ["IR", "Infrared signal can indicate flame or hot material"],
+        ],
+        columns=["Signal", "Meaning"],
+    )
+    html_table(rule_table)
 
 with historical_nrw_tab:
     st.subheader("Historical NRW: Hürtgenwald")
@@ -625,7 +729,7 @@ with historical_nrw_tab:
                     )
                 )
                 st.markdown("#### Daily Summary")
-                html_table(daily_history.round(2))
+                html_table(round_numeric(daily_history))
 
                 with st.expander("Show hourly historical data"):
                     table = history.copy()
@@ -653,7 +757,7 @@ with historical_nrw_tab:
                                 "Wind (km/h)",
                                 "Direction",
                             ]
-                        ].round(2),
+                        ].pipe(round_numeric),
                         max_rows=500,
                     )
         except Exception as exc:
@@ -721,7 +825,7 @@ with paris_tab:
     )
 
     with st.expander("Show detailed Paris rows"):
-        html_table(paris.round(2), use_container_width=True, hide_index=True)
+        html_table(round_numeric(paris), use_container_width=True, hide_index=True)
 
 with germany_tab:
     st.subheader("Germany Wind")
@@ -865,7 +969,7 @@ with wildfire_tab:
             }
         )
     )
-    html_table(fire_daily.round(2), use_container_width=True, hide_index=True)
+    html_table(round_numeric(fire_daily), use_container_width=True, hide_index=True)
 
     with st.expander("Show hourly fire-weather data"):
         html_table(
@@ -891,7 +995,7 @@ with wildfire_tab:
                     "fire_30_30_30": "30-30-30",
                 }
             )
-            .round(2),
+            .pipe(round_numeric),
             use_container_width=True,
             hide_index=True,
         )
@@ -932,7 +1036,7 @@ with patterns_tab:
                     "wind10_mps_max": "Highest wind (m/s)",
                     "wind10_mps_p90": "High-wind level (m/s)",
                 }
-            ).round(2),
+            ).pipe(round_numeric),
             use_container_width=True,
             hide_index=True,
         )
