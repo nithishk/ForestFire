@@ -134,6 +134,71 @@ st.markdown(
         display: block;
         margin-bottom: 5px;
     }
+    .hero {
+        background: linear-gradient(135deg, #092018 0%, #123524 45%, #7f1d1d 100%);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        padding: 22px 24px;
+        margin: 4px 0 18px 0;
+        color: #f8fafc;
+    }
+    .hero-kicker {
+        color: #bbf7d0;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .hero-title {
+        font-size: 2.2rem;
+        line-height: 1.1;
+        font-weight: 800;
+        margin-top: 6px;
+    }
+    .hero-subtitle {
+        max-width: 760px;
+        color: #e2e8f0;
+        margin-top: 8px;
+    }
+    .status-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+    }
+    .status-pill {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+    .status-pill span {
+        display: block;
+        color: #bfdbfe;
+        font-size: 0.78rem;
+        margin-bottom: 4px;
+    }
+    .status-pill strong {
+        color: #ffffff;
+        font-size: 1.02rem;
+    }
+    .decision-panel {
+        background: #111827;
+        border: 1px solid #374151;
+        border-left: 5px solid #ef4444;
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 12px 0 18px 0;
+        color: #f9fafb;
+    }
+    .decision-panel h4 {
+        margin: 0 0 8px 0;
+        font-size: 1.05rem;
+    }
+    .decision-panel p {
+        margin: 4px 0;
+        color: #d1d5db;
+    }
     h1, h2, h3 { letter-spacing: 0; }
     </style>
     """,
@@ -470,6 +535,41 @@ def signal_cards() -> None:
     st.markdown(f"<div class='signal-grid'>{cards}</div>", unsafe_allow_html=True)
 
 
+def hero_section() -> None:
+    st.markdown(
+        """
+        <div class='hero'>
+          <div class='hero-kicker'>CTRL-F · Wildfire Intelligence MVP</div>
+          <div class='hero-title'>Early fire detection for field teams.</div>
+          <div class='hero-subtitle'>
+            Sensor signals, live weather, wind direction, and historical fire-weather context in one operational view.
+          </div>
+          <div class='status-row'>
+            <div class='status-pill'><span>Region</span><strong>Hürtgenwald, NRW</strong></div>
+            <div class='status-pill'><span>Demo Mode</span><strong>Sensor + Weather</strong></div>
+            <div class='status-pill'><span>Prediction</span><strong>Fire probability</strong></div>
+            <div class='status-pill'><span>Response</span><strong>Drone scan ready</strong></div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def decision_panel(sensor_id: str, zone: str, prediction: str, probability: float) -> None:
+    action = "Dispatch drone scan" if prediction in {"Critical", "High"} else "Continue monitoring"
+    priority = "Immediate" if prediction == "Critical" else ("High" if prediction == "High" else "Normal")
+    st.markdown(
+        "<div class='decision-panel'>"
+        "<h4>Suggested response</h4>"
+        f"<p><strong>Action:</strong> {escape(action)}</p>"
+        f"<p><strong>Priority:</strong> {escape(priority)}</p>"
+        f"<p><strong>Evidence:</strong> {escape(sensor_id)} at {escape(zone)} is at {probability:.0f}% predicted fire probability.</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def round_numeric(frame: pd.DataFrame, decimals: int = 2) -> pd.DataFrame:
     rounded = frame.copy()
     numeric_cols = rounded.select_dtypes(include="number").columns
@@ -522,47 +622,48 @@ def daily_weather_labels(paris_daily: pd.DataFrame) -> pd.DataFrame:
 
 data = load_data()
 
-st.title("Weather Dashboard")
+st.title("CTRL-F FireWatch")
+hero_section()
 
-overview_tab, live_nrw_tab, sensor_demo_tab, historical_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
-    ["Overview", "Live NRW", "Sensor Demo", "Historical NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
+overview_tab, sensor_demo_tab, live_nrw_tab, historical_nrw_tab, wildfire_tab, paris_tab, germany_tab, patterns_tab, simulation_tab = st.tabs(
+    ["Overview", "Fire Prediction", "Live NRW", "Historical NRW", "Wildfire", "Paris", "Germany", "Patterns", "Simulation"]
 )
 
 with overview_tab:
-    st.subheader("Overview")
+    st.subheader("Mission View")
     metric_cards(
         [
-            ("Paris records", f"{len(data['paris']):,} hours"),
-            ("Germany records", f"{len(data['germany']):,} hours"),
-            ("Paris avg temp", f"{data['paris']['t2m_c'].mean():.1f} C"),
-            ("Germany avg wind", f"{data['germany']['wind10_mps_mean'].mean():.1f} m/s"),
+            ("MVP stack", "Sensors + weather"),
+            ("Target area", "Hürtgenwald"),
+            ("Core signal", "Fire probability"),
+            ("Field action", "Drone scan"),
         ]
     )
     insight(
-        "Paris shows a short summer period, while Germany gives us a full-year view of wind patterns."
+        "The demo combines simulated ground sensors with live NRW weather and fire-weather context."
     )
 
     left, right = st.columns(2)
     with left:
-        st.markdown("#### Paris")
+        st.markdown("#### What CTRL-F Detects")
         st.write(
-            "Warm overall. Rain is concentrated at the start of the period."
+            "Smoke, CO, heat, humidity, wind, and IR signals are combined into one fire-probability score."
         )
-        st.caption("Temperature and wind over time.")
-        svg_line_chart(
-            data["paris"].set_index("time_utc")[["t2m_c", "wind10_mps"]],
-            height=300,
-        )
+        signal_cards()
     with right:
-        st.markdown("#### Germany")
-        st.write("Full-year wind data. October is the windiest month.")
-        st.caption("Average wind by month.")
-        svg_bar_chart(
-            data["germany_monthly"].set_index("month")["wind10_mps_mean"],
-            height=300,
+        st.markdown("#### Demo Flow")
+        flow = pd.DataFrame(
+            [
+                ["1", "Sensor board", "Reads smoke, CO, IR, temperature, humidity"],
+                ["2", "Data tunnel", "LoRa/WiFi sends readings to server"],
+                ["3", "Prediction", "Risk score detects early fire signal"],
+                ["4", "Response", "Dashboard suggests field action"],
+            ],
+            columns=["Step", "Layer", "Role"],
         )
+        html_table(flow)
 
-    note("Paris has 10 complete days, but 2026-07-19 is missing from the source data.")
+    note("Fire Prediction uses simulated sensor readings for demo. Live NRW uses live weather API calls and Copernicus EFFIS map layers.")
 
 with live_nrw_tab:
     st.subheader("Live NRW: Hürtgenwald")
@@ -669,6 +770,12 @@ with sensor_demo_tab:
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
 
     risk_banner(
+        str(highest["sensor_id"]),
+        str(highest["zone"]),
+        str(highest["prediction"]),
+        float(highest["fire_probability_pct"]),
+    )
+    decision_panel(
         str(highest["sensor_id"]),
         str(highest["zone"]),
         str(highest["prediction"]),
