@@ -151,43 +151,34 @@ st.markdown(
         background: #e2e8f0;
         color: #1e293b;
     }
-    .hero {
-        background: linear-gradient(135deg, #092018 0%, #123524 45%, #7f1d1d 100%);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 12px;
-        padding: 22px 24px;
-        margin: 4px 0 18px 0;
+    .topbar {
+        background: #0d1714;
+        border: 1px solid #1f3b31;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 4px 0 14px 0;
         color: #f8fafc;
-    }
-    .hero-kicker {
-        color: #bbf7d0;
-        font-weight: 700;
-        font-size: 0.85rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-    .hero-title {
-        font-size: 2.2rem;
-        line-height: 1.1;
-        font-weight: 800;
-        margin-top: 6px;
-    }
-    .hero-subtitle {
-        max-width: 760px;
-        color: #e2e8f0;
-        margin-top: 8px;
-    }
-    .status-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        grid-template-columns: 1.2fr repeat(3, minmax(130px, 0.55fr));
         gap: 10px;
-        margin-top: 18px;
+        align-items: center;
+    }
+    .topbar-title strong {
+        display: block;
+        font-size: 1.28rem;
+        line-height: 1.1;
+    }
+    .topbar-title span {
+        display: block;
+        color: #cbd5e1;
+        font-size: 0.86rem;
+        margin-top: 4px;
     }
     .status-pill {
         background: rgba(255,255,255,0.1);
         border: 1px solid rgba(255,255,255,0.16);
         border-radius: 8px;
-        padding: 10px 12px;
+        padding: 8px 10px;
     }
     .status-pill span {
         display: block;
@@ -197,7 +188,10 @@ st.markdown(
     }
     .status-pill strong {
         color: #ffffff;
-        font-size: 1.02rem;
+        font-size: 0.95rem;
+    }
+    @media (max-width: 900px) {
+        .topbar { grid-template-columns: 1fr; }
     }
     .decision-panel {
         background: #f8fafc;
@@ -755,6 +749,23 @@ def hero_section() -> None:
     )
 
 
+def compact_header() -> None:
+    st.markdown(
+        """
+        <div class='topbar'>
+          <div class='topbar-title'>
+            <strong>CTRL-F FireWatch</strong>
+            <span>Early fire detection using sensors, live weather, and wind direction.</span>
+          </div>
+          <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
+          <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
+          <div class='status-pill'><span>Output</span><strong>Fire probability</strong></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def decision_panel(sensor_id: str, zone: str, prediction: str, probability: float, signal_time: object) -> None:
     status = "Fire-risk signal detected" if prediction in {"Critical", "High"} else "No strong fire-risk signal"
     priority = "Critical" if prediction == "Critical" else ("High" if prediction == "High" else "Normal")
@@ -927,8 +938,7 @@ def daily_weather_labels(paris_daily: pd.DataFrame) -> pd.DataFrame:
 
 data = load_data()
 
-st.title("CTRL-F FireWatch")
-hero_section()
+compact_header()
 
 overview_tab, sensor_demo_tab, live_nrw_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
     ["Overview", "Fire Prediction", "Live NRW", "Historical NRW", "Weather Analysis", "Patterns"]
