@@ -827,7 +827,7 @@ def fire_summary_panel(
     )
 
 
-def rule_check_tiles(weather: pd.DataFrame) -> None:
+def rule_check_tiles(weather: pd.DataFrame, latest: pd.Series) -> None:
     hot_hours = int((weather["temperature_c"] >= 30).sum())
     dry_hours = int((weather["humidity_pct"] <= 30).sum())
     windy_hours = int((weather["wind_kmh"] >= 30).sum())
@@ -843,14 +843,14 @@ def rule_check_tiles(weather: pd.DataFrame) -> None:
         verdict = "No 30-30-30 window forecast"
         verdict_class = "rule-clear"
     rows = [
-        ("Heat above 30 C", hot_hours),
-        ("Humidity below 30%", dry_hours),
-        ("Wind above 30 km/h", windy_hours),
-        ("All three together", rule_hours),
+        ("Temperature", f"{float(latest['temperature_c']):.1f} C now", "needs >= 30 C", hot_hours),
+        ("Humidity", f"{float(latest['humidity_pct']):.0f}% now", "needs <= 30%", dry_hours),
+        ("Wind", f"{float(latest['wind_kmh']):.1f} km/h now", "needs >= 30 km/h", windy_hours),
+        ("Full rule", f"{rule_hours} forecast hours", "all three together", rule_hours),
     ]
     row_html = "".join(
-        f"<div class='rule-row'><span>{escape(label)}</span><strong>{hours} h</strong></div>"
-        for label, hours in rows
+        f"<div class='rule-row'><span>{escape(label)}<br>{escape(threshold)}</span><strong>{escape(value)}</strong></div>"
+        for label, value, threshold, hours in rows
     )
     st.markdown(
         "<div class='rule-panel'>"
@@ -1008,8 +1008,8 @@ with live_nrw_tab:
             )
         with right:
             st.markdown("#### 30-30-30 Checks")
-            st.caption("A quick fire-weather rule: hot, dry, and windy at the same time.")
-            rule_check_tiles(live_weather)
+            st.caption("Current values compared with the fire-weather rule.")
+            rule_check_tiles(live_weather, latest)
 
         st.markdown("#### Wind Direction")
         st.caption("Wind direction matters for possible fire spread.")
