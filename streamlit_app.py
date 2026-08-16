@@ -548,7 +548,7 @@ def hero_section() -> None:
             <div class='status-pill'><span>Region</span><strong>Hürtgenwald, NRW</strong></div>
             <div class='status-pill'><span>Demo Mode</span><strong>Sensor + Weather</strong></div>
             <div class='status-pill'><span>Prediction</span><strong>Fire probability</strong></div>
-            <div class='status-pill'><span>Response</span><strong>Drone scan ready</strong></div>
+            <div class='status-pill'><span>Data Inputs</span><strong>Weather + Sensors</strong></div>
           </div>
         </div>
         """,
@@ -557,13 +557,13 @@ def hero_section() -> None:
 
 
 def decision_panel(sensor_id: str, zone: str, prediction: str, probability: float) -> None:
-    action = "Dispatch drone scan" if prediction in {"Critical", "High"} else "Continue monitoring"
-    priority = "Immediate" if prediction == "Critical" else ("High" if prediction == "High" else "Normal")
+    status = "Fire-risk signal detected" if prediction in {"Critical", "High"} else "No strong fire-risk signal"
+    priority = "Critical" if prediction == "Critical" else ("High" if prediction == "High" else "Normal")
     st.markdown(
         "<div class='decision-panel'>"
-        "<h4>Suggested response</h4>"
-        f"<p><strong>Action:</strong> {escape(action)}</p>"
-        f"<p><strong>Priority:</strong> {escape(priority)}</p>"
+        "<h4>Prediction output</h4>"
+        f"<p><strong>Status:</strong> {escape(status)}</p>"
+        f"<p><strong>Risk level:</strong> {escape(priority)}</p>"
         f"<p><strong>Evidence:</strong> {escape(sensor_id)} at {escape(zone)} is at {probability:.0f}% predicted fire probability.</p>"
         "</div>",
         unsafe_allow_html=True,
@@ -636,7 +636,7 @@ with overview_tab:
             ("MVP stack", "Sensors + weather"),
             ("Target area", "Hürtgenwald"),
             ("Core signal", "Fire probability"),
-            ("Field action", "Drone scan"),
+            ("Data inputs", "Weather + sensors"),
         ]
     )
     insight(
@@ -651,13 +651,13 @@ with overview_tab:
         )
         signal_cards()
     with right:
-        st.markdown("#### Demo Flow")
+        st.markdown("#### Data Flow")
         flow = pd.DataFrame(
             [
                 ["1", "Sensor board", "Reads smoke, CO, IR, temperature, humidity"],
                 ["2", "Data tunnel", "LoRa/WiFi sends readings to server"],
                 ["3", "Prediction", "Risk score detects early fire signal"],
-                ["4", "Response", "Dashboard suggests field action"],
+                ["4", "Dashboard", "Shows prediction and supporting evidence"],
             ],
             columns=["Step", "Layer", "Role"],
         )
