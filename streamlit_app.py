@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from live_pipeline import effis_map_url, fetch_hurtgenwald_weather, risk_label
+from live_pipeline import effis_map_url, fetch_hurtgenwald_history, fetch_hurtgenwald_weather, risk_label
 
 
 ROOT = Path(__file__).resolve().parent
@@ -211,6 +211,11 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
     return fetch_hurtgenwald_weather()
 
 
+@st.cache_data(ttl=3600)
+def load_hurtgenwald_history(start_date, end_date):
+    return fetch_hurtgenwald_history(start_date, end_date)
+
+
 def metric_cards(items: list[tuple[str, str]]) -> None:
     cards = "".join(
         "<div class='metric-card'>"
@@ -392,8 +397,8 @@ data = load_data()
 
 st.title("Weather Dashboard")
 
-overview_tab, live_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
-    ["Overview", "Live NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
+overview_tab, live_nrw_tab, historical_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
+    ["Overview", "Live NRW", "Historical NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
 )
 
 with overview_tab:
@@ -524,6 +529,136 @@ with live_nrw_tab:
         st.caption(str(exc))
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+
+with historical_nrw_tab:
+    st.subheader("Historical NRW: Hürtgenwald")
+    st.write("Review past weather conditions around an incident window.")
+
+    default_end = pd.Timestamp.today().date()
+    default_start = default_end - pd.Timedelta(days=14)
+    selected = st.date_input(
+        "Incident window",
+        (default_start, default_end),
+        max_value=default_end,
+        key="historical_nrw_window",
+    )
+    if isinstance(selected, tuple) and len(selected) == 2:
+        hist_start, hist_end = selected
+    else:
+        hist_start, hist_end = default_start, default_end
+
+    if hist_start > hist_end:
+        st.error("Start date must be before end date.")
+    else:
+        try:
+            history, source_name = load_hurtgenwald_history(hist_start, hist_end)
+            if history.empty:
+                st.warning("No historical rows returned for this date range.")
+            else:
+                full_rule_hours = int(history["fire_30_30_30"].sum())
+                near_risk_hours = int((history["fire_weather_score"] >= 2).sum())
+                worst = history.sort_values(
+                    ["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False
+                ).iloc[0]
+                worst_risk = risk_label(int(worst["fire_weather_score"]), bool(worst["fire_30_30_30"]))
+
+                metric_cards(
+                    [
+                        ("Data source", source_name),
+                        ("30-30-30 hours", f"{full_rule_hours}"),
+                        ("Near-risk hours", f"{near_risk_hours}"),
+                        ("Max temp", f"{history['temperature_c'].max():.1f} C"),
+                        ("Max wind", f"{history['wind_kmh'].max():.1f} km/h"),
+                    ]
+                )
+
+                insight(
+                    f"Highest risk: {worst_risk} on {worst['time']:%d %b, %H:%M}. "
+                    "This shows conditions that could support spread; it does not identify the ignition cause."
+                )
+
+                left, right = st.columns([2, 1])
+                with left:
+                    st.markdown("#### Weather Before And During The Incident")
+                    svg_line_chart(
+                        history.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
+                        height=360,
+                    )
+                with right:
+                    st.markdown("#### Rule Checks")
+                    rule_counts = pd.Series(
+                        {
+                            "Temp >= 30 C": int((history["temperature_c"] >= 30).sum()),
+                            "Humidity <= 30%": int((history["humidity_pct"] <= 30).sum()),
+                            "Wind >= 30 km/h": int((history["wind_kmh"] >= 30).sum()),
+                            "All 3 together": full_rule_hours,
+                        }
+                    )
+                    svg_bar_chart(rule_counts, height=360)
+
+                st.markdown("#### Wind Direction")
+                st.caption("Useful for reconstructing likely spread direction.")
+                svg_bar_chart(direction_counts(history, "wind_direction"), height=260)
+
+                daily_history = (
+                    history.assign(Date=history["time"].dt.date)
+                    .groupby("Date", as_index=False)
+                    .agg(
+                        Max_Temp_C=("temperature_c", "max"),
+                        Lowest_Humidity_Pct=("humidity_pct", "min"),
+                        Rain_Total_Mm=("rain_mm", "sum"),
+                        Max_Wind_Kmh=("wind_kmh", "max"),
+                        Main_Direction=("wind_direction", lambda s: s.mode().iat[0] if not s.mode().empty else ""),
+                        Rule_Hours=("fire_30_30_30", "sum"),
+                        Near_Risk_Hours=("fire_weather_score", lambda s: int((s >= 2).sum())),
+                    )
+                    .rename(
+                        columns={
+                            "Max_Temp_C": "Max temp (C)",
+                            "Lowest_Humidity_Pct": "Lowest humidity (%)",
+                            "Rain_Total_Mm": "Rain total (mm)",
+                            "Max_Wind_Kmh": "Max wind (km/h)",
+                            "Main_Direction": "Main direction",
+                            "Rule_Hours": "30-30-30 hours",
+                            "Near_Risk_Hours": "Near-risk hours",
+                        }
+                    )
+                )
+                st.markdown("#### Daily Summary")
+                html_table(daily_history.round(2))
+
+                with st.expander("Show hourly historical data"):
+                    table = history.copy()
+                    table["Risk"] = [
+                        risk_label(int(row.fire_weather_score), bool(row.fire_30_30_30))
+                        for row in table.itertuples()
+                    ]
+                    html_table(
+                        table.rename(
+                            columns={
+                                "time": "Time",
+                                "temperature_c": "Temp (C)",
+                                "humidity_pct": "Humidity (%)",
+                                "rain_mm": "Rain (mm)",
+                                "wind_kmh": "Wind (km/h)",
+                                "wind_direction": "Direction",
+                            }
+                        )[
+                            [
+                                "Time",
+                                "Risk",
+                                "Temp (C)",
+                                "Humidity (%)",
+                                "Rain (mm)",
+                                "Wind (km/h)",
+                                "Direction",
+                            ]
+                        ].round(2),
+                        max_rows=500,
+                    )
+        except Exception as exc:
+            st.error("Historical data is temporarily unavailable.")
+            st.caption(str(exc))
 
 with paris_tab:
     st.subheader("Paris Weather")
