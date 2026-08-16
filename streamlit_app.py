@@ -364,6 +364,16 @@ def format_signal_time(value: object) -> str:
     return timestamp.strftime("%d %b %Y, %H:%M")
 
 
+def format_signal_date(value: object) -> str:
+    timestamp = pd.Timestamp(value)
+    return timestamp.strftime("%d %b")
+
+
+def format_signal_clock(value: object) -> str:
+    timestamp = pd.Timestamp(value)
+    return timestamp.strftime("%H:%M")
+
+
 def metric_cards(items: list[tuple[str, str]]) -> None:
     cards = "".join(
         "<div class='metric-card'>"
@@ -526,7 +536,7 @@ def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float, 
         f"{risk_class(prediction)}'>"
         f"<h3>{escape(prediction)} · {probability:.0f}% fire probability</h3>"
         f"<p>{escape(message)}</p>"
-        f"<p><strong>Signal time:</strong> {escape(signal_label)}</p>"
+        f"<p><strong>Estimated fire-risk time:</strong> {escape(signal_label)}</p>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -615,7 +625,7 @@ def decision_panel(sensor_id: str, zone: str, prediction: str, probability: floa
         "<div class='chip-row'>"
         f"<span class='chip {chip_class}'>{escape(priority)} risk</span>"
         f"<span class='chip'>{probability:.0f}% probability</span>"
-        f"<span class='chip'>Signal time: {escape(format_signal_time(signal_time))}</span>"
+        f"<span class='chip'>Estimated time: {escape(format_signal_time(signal_time))}</span>"
         f"<span class='chip'>{escape(status)}</span>"
         "</div>"
         "</div>",
@@ -835,27 +845,31 @@ with sensor_demo_tab:
     sensor_data = load_sensor_demo(seed)
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
+    hotspot_rows = sensor_data[sensor_data["sensor_id"] == highest["sensor_id"]].copy()
+    critical_rows = hotspot_rows[hotspot_rows["prediction"] == "Critical"]
+    first_critical = None if critical_rows.empty else critical_rows.sort_values("time").iloc[0]
+    estimated_fire_time = highest["time"] if first_critical is None else first_critical["time"]
 
     risk_banner(
         str(highest["sensor_id"]),
         str(highest["zone"]),
         str(highest["prediction"]),
         float(highest["fire_probability_pct"]),
-        highest["time"],
+        estimated_fire_time,
     )
     decision_panel(
         str(highest["sensor_id"]),
         str(highest["zone"]),
         str(highest["prediction"]),
         float(highest["fire_probability_pct"]),
-        highest["time"],
+        estimated_fire_time,
     )
 
     metric_cards(
         [
             ("Sensor", f"{highest['sensor_id']}"),
             ("Zone", str(highest["zone"])),
-            ("Signal time", format_signal_time(highest["time"])),
+            ("Estimated risk time", format_signal_time(estimated_fire_time)),
             ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
             ("CO", f"{highest['co_ppm']:.1f} ppm"),
             ("Battery", f"{highest['battery_pct']:.0f}%"),
@@ -889,7 +903,7 @@ with sensor_demo_tab:
             ]
         ].rename(
             columns={
-                "time": "Signal time",
+                "time": "Date",
                 "sensor_id": "Sensor",
                 "zone": "Zone",
                 "prediction": "Prediction",
@@ -901,18 +915,16 @@ with sensor_demo_tab:
                 "battery_pct": "Battery (%)",
             }
         )
-        latest_table["Signal time"] = latest_table["Signal time"].map(format_signal_time)
+        latest_table.insert(1, "Time", latest_table["Date"].map(format_signal_clock))
+        latest_table["Date"] = latest_table["Date"].map(format_signal_date)
         html_table(round_numeric(latest_table))
 
     st.markdown("#### Hotspot Timeline")
-    hotspot_rows = sensor_data[sensor_data["sensor_id"] == highest["sensor_id"]].copy()
-    critical_rows = hotspot_rows[hotspot_rows["prediction"] == "Critical"]
-    if critical_rows.empty:
+    if first_critical is None:
         st.caption("The demo hotspot escalates as smoke, CO, and IR rise together.")
     else:
-        first_critical = critical_rows.sort_values("time").iloc[0]
         st.caption(
-            f"The demo hotspot first reaches critical risk on {format_signal_time(first_critical['time'])}."
+            f"Estimated fire-risk time: {format_signal_time(first_critical['time'])}. This is when the demo sensor first reaches critical risk."
         )
     hotspot_history = hotspot_rows.set_index("time")
     svg_line_chart(
