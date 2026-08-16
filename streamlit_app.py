@@ -865,8 +865,8 @@ data = load_data()
 st.title("CTRL-F FireWatch")
 hero_section()
 
-overview_tab, sensor_demo_tab, live_nrw_tab, historical_nrw_tab, wildfire_tab, paris_tab, germany_tab, patterns_tab, simulation_tab = st.tabs(
-    ["Overview", "Fire Prediction", "Live NRW", "Historical NRW", "Wildfire", "Paris", "Germany", "Patterns", "Simulation"]
+overview_tab, sensor_demo_tab, live_nrw_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
+    ["Overview", "Fire Prediction", "Live NRW", "Historical NRW", "Weather Analysis", "Patterns"]
 )
 
 with overview_tab:
@@ -1220,241 +1220,110 @@ with historical_nrw_tab:
             st.error("Historical data is temporarily unavailable.")
             st.caption(str(exc))
 
-with paris_tab:
-    st.subheader("Paris Weather")
-    st.write("Temperature, rain, and wind for the available Paris dates.")
-    paris = date_filter(data["paris"], "paris_date_filter")
-    daily = daily_weather_labels(data["paris_daily"])
-    paris_direction_deg, paris_direction = main_wind_direction(paris, "u10", "v10")
+with weather_tab:
+    st.subheader("Weather Analysis")
+    st.write("Choose a dataset to explore. This keeps Paris and Germany analysis in one place.")
+    selected_weather = st.selectbox("Dataset", ["Paris weather", "Germany wind"], key="weather_analysis_dataset")
 
-    metric_cards(
-        [
-            ("Mean temp", f"{paris['t2m_c'].mean():.1f} C"),
-            ("Max temp", f"{paris['t2m_c'].max():.1f} C"),
-            ("Total rain", f"{paris['tp_mm'].sum():.1f} mm"),
-            ("Mean wind", f"{paris['wind10_mps'].mean():.1f} m/s"),
-            ("Main direction", f"{paris_direction} ({paris_direction_deg:.0f} deg)"),
-        ]
-    )
-    insight(
-        "Warm days, cooler early mornings, hottest in the afternoon."
-    )
+    if selected_weather == "Paris weather":
+        paris = date_filter(data["paris"], "paris_date_filter")
+        daily = daily_weather_labels(data["paris_daily"])
+        paris_direction_deg, paris_direction = main_wind_direction(paris, "u10", "v10")
 
-    left, right = st.columns([2, 1])
-    with left:
+        metric_cards(
+            [
+                ("Mean temp", f"{paris['t2m_c'].mean():.1f} C"),
+                ("Max temp", f"{paris['t2m_c'].max():.1f} C"),
+                ("Total rain", f"{paris['tp_mm'].sum():.1f} mm"),
+                ("Mean wind", f"{paris['wind10_mps'].mean():.1f} m/s"),
+                ("Main direction", f"{paris_direction} ({paris_direction_deg:.0f} deg)"),
+            ]
+        )
+        insight("Paris is a short summer weather sample. Use it for temperature, rain, and hourly pattern checks.")
+
         st.markdown("#### Hourly Trend")
         st.caption("Temperature, dew point, wind, and rain.")
-        svg_line_chart(paris.set_index("time_utc")[["t2m_c", "d2m_c", "wind10_mps", "tp_mm"]], height=360)
-    with right:
-        st.markdown("#### Daily Labels")
-        st.caption("Hot, rainy, windy, or mild/dry.")
-        html_table(
-            friendly_daily_table(daily[
-                [
-                    "date",
-                    "weather_type",
-                    "temp_c_mean",
-                    "temp_c_max",
-                    "precipitation_mm_total",
-                    "wind10_mps_mean",
-                ]
-            ]),
-            use_container_width=True,
-            hide_index=True,
-        )
+        svg_line_chart(paris.set_index("time_utc")[["t2m_c", "d2m_c", "wind10_mps", "tp_mm"]], height=340)
 
-    st.markdown("#### Wind Direction")
-    st.caption("How often the wind came from each compass direction.")
-    svg_bar_chart(direction_counts(paris, "wind_direction"), height=260)
-
-    st.markdown("#### Daily Cycle")
-    st.caption("Average by hour.")
-    cycle = paris.groupby("hour", as_index=False).agg(
-        temp_c=("t2m_c", "mean"),
-        wind_mps=("wind10_mps", "mean"),
-        rain_mm=("tp_mm", "mean"),
-    )
-    svg_line_chart(
-        cycle.rename(columns={"temp_c": "Temperature (C)", "wind_mps": "Wind (m/s)", "rain_mm": "Rain (mm)"})
-        .set_index("hour"),
-        height=300,
-    )
-
-    with st.expander("Show detailed Paris rows"):
-        html_table(round_numeric(paris), use_container_width=True, hide_index=True)
-
-with germany_tab:
-    st.subheader("Germany Wind")
-    st.write("Wind patterns across Germany during 2025.")
-    germany = date_filter(data["germany"], "germany_date_filter")
-    germany_direction_deg, germany_direction = main_wind_direction(germany, "u10_mean", "v10_mean")
-
-    metric_cards(
-        [
-            ("Mean wind", f"{germany['wind10_mps_mean'].mean():.1f} m/s"),
-            ("Max wind", f"{germany['wind10_mps_max'].max():.1f} m/s"),
-            ("P90 wind", f"{germany['wind10_mps_p90'].mean():.1f} m/s"),
-            ("Filtered hours", f"{len(germany):,}"),
-            ("Main direction", f"{germany_direction} ({germany_direction_deg:.0f} deg)"),
-        ]
-    )
-    insight(
-        "Autumn and winter are windier. The northwest grid cells stand out."
-    )
-
-    left, right = st.columns([2, 1])
-    with left:
-        st.markdown("#### Wind Over Time")
-        st.caption("Average wind and high-wind level.")
-        svg_line_chart(germany.set_index("time_utc")[["wind10_mps_mean", "wind10_mps_p90"]], height=360)
-    with right:
-        st.markdown("#### Monthly Wind")
-        st.caption("Seasonal pattern.")
-        svg_bar_chart(data["germany_monthly"].set_index("month")["wind10_mps_mean"], height=360)
-
-    st.markdown("#### Wind Direction")
-    st.caption("How often the average wind came from each compass direction.")
-    svg_bar_chart(direction_counts(germany, "wind_direction"), height=260)
-
-    st.markdown("#### Wind By Location")
-    st.caption("Bigger and darker points are windier.")
-    map_data = data["germany_grid"].rename(columns={"latitude": "lat", "longitude": "lon"})
-    svg_scatter_chart(
-        map_data,
-        x="lon",
-        y="lat",
-        size="wind10_mps_mean",
-        color="wind10_mps_mean",
-        height=420,
-    )
-
-    with st.expander("Show strongest wind locations"):
-        strongest = data["germany_grid"].sort_values("wind10_mps_mean", ascending=False).head(20)
-        html_table(
-            strongest.rename(
-                columns={
-                    "latitude": "Latitude",
-                    "longitude": "Longitude",
-                    "wind10_mps_mean": "Average wind (m/s)",
-                    "wind10_mps_max": "Highest wind (m/s)",
-                    "wind10_mps_p90": "High-wind level (m/s)",
-                    "wind_direction": "Direction",
-                }
-            )[
-                [
-                    "Latitude",
-                    "Longitude",
-                    "Average wind (m/s)",
-                    "Highest wind (m/s)",
-                    "High-wind level (m/s)",
-                    "Direction",
-                ]
-            ].round(3),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-with wildfire_tab:
-    st.subheader("Wildfire Weather")
-    st.write("30-30-30 rule: 30 C or hotter, relative humidity at or below 30%, and wind at least 30 km/h.")
-
-    fire = date_filter(data["paris"], "wildfire_date_filter")
-    fire_direction_deg, fire_direction = main_wind_direction(fire, "u10", "v10")
-    fire_hours = int(fire["fire_30_30_30"].sum())
-    near_fire_hours = int((fire["fire_weather_score"] >= 2).sum())
-
-    metric_cards(
-        [
-            ("30-30-30 hours", f"{fire_hours}"),
-            ("Near-risk hours", f"{near_fire_hours}"),
-            ("Lowest humidity", f"{fire['relative_humidity_pct'].min():.1f}%"),
-            ("Max wind", f"{fire['wind10_kmh'].max():.1f} km/h"),
-            ("Main direction", f"{fire_direction} ({fire_direction_deg:.0f} deg)"),
-        ]
-    )
-
-    if fire_hours:
-        insight("The selected period includes hours that match the 30-30-30 fire-weather rule.")
-    else:
-        insight("No full 30-30-30 events appear in the selected Paris data.")
-
-    left, right = st.columns([2, 1])
-    with left:
-        st.markdown("#### Fire Weather Inputs")
-        st.caption("Temperature, relative humidity, and wind speed in km/h.")
-        svg_line_chart(
-            fire.set_index("time_utc")[["t2m_c", "relative_humidity_pct", "wind10_kmh"]],
-            height=360,
-        )
-    with right:
-        st.markdown("#### Rule Checks")
-        rule_counts = pd.Series(
-            {
-                "Temp >= 30 C": int((fire["t2m_c"] >= 30).sum()),
-                "Humidity <= 30%": int((fire["relative_humidity_pct"] <= 30).sum()),
-                "Wind >= 30 km/h": int((fire["wind10_kmh"] >= 30).sum()),
-                "All 3 together": fire_hours,
-            }
-        )
-        svg_bar_chart(rule_counts, height=360)
-
-    st.markdown("#### Wind Direction")
-    st.caption("Important for understanding possible spread direction.")
-    svg_bar_chart(direction_counts(fire, "wind_direction"), height=260)
-
-    st.markdown("#### Daily Fire Weather Summary")
-    fire_daily = (
-        fire.assign(Date=fire["time_utc"].dt.date)
-        .groupby("Date", as_index=False)
-        .agg(
-            Max_Temp_C=("t2m_c", "max"),
-            Lowest_Humidity_Pct=("relative_humidity_pct", "min"),
-            Max_Wind_Kmh=("wind10_kmh", "max"),
-            Main_Direction=("wind_direction", lambda s: s.mode().iat[0] if not s.mode().empty else ""),
-            Rule_Hours=("fire_30_30_30", "sum"),
-            Near_Risk_Hours=("fire_weather_score", lambda s: int((s >= 2).sum())),
-        )
-        .rename(
-            columns={
-                "Max_Temp_C": "Max temp (C)",
-                "Lowest_Humidity_Pct": "Lowest humidity (%)",
-                "Max_Wind_Kmh": "Max wind (km/h)",
-                "Main_Direction": "Main direction",
-                "Rule_Hours": "30-30-30 hours",
-                "Near_Risk_Hours": "Near-risk hours",
-            }
-        )
-    )
-    html_table(round_numeric(fire_daily), use_container_width=True, hide_index=True)
-
-    with st.expander("Show hourly fire-weather data"):
-        html_table(
-            fire[
-                [
-                    "time_utc",
-                    "t2m_c",
-                    "relative_humidity_pct",
-                    "wind10_kmh",
-                    "wind_direction",
-                    "fire_weather_score",
-                    "fire_30_30_30",
-                ]
-            ]
-            .rename(
-                columns={
-                    "time_utc": "Time",
-                    "t2m_c": "Temp (C)",
-                    "relative_humidity_pct": "Humidity (%)",
-                    "wind10_kmh": "Wind (km/h)",
-                    "wind_direction": "Direction",
-                    "fire_weather_score": "Rule score",
-                    "fire_30_30_30": "30-30-30",
-                }
+        with st.expander("Daily labels"):
+            html_table(
+                friendly_daily_table(daily[
+                    [
+                        "date",
+                        "weather_type",
+                        "temp_c_mean",
+                        "temp_c_max",
+                        "precipitation_mm_total",
+                        "wind10_mps_mean",
+                    ]
+                ]),
+                use_container_width=True,
+                hide_index=True,
             )
-            .pipe(round_numeric),
-            use_container_width=True,
-            hide_index=True,
+        with st.expander("Wind direction"):
+            svg_bar_chart(direction_counts(paris, "wind_direction"), height=260)
+        with st.expander("Detailed Paris rows"):
+            html_table(round_numeric(paris), use_container_width=True, hide_index=True)
+    else:
+        germany = date_filter(data["germany"], "germany_date_filter")
+        germany_direction_deg, germany_direction = main_wind_direction(germany, "u10_mean", "v10_mean")
+
+        metric_cards(
+            [
+                ("Mean wind", f"{germany['wind10_mps_mean'].mean():.1f} m/s"),
+                ("Max wind", f"{germany['wind10_mps_max'].max():.1f} m/s"),
+                ("P90 wind", f"{germany['wind10_mps_p90'].mean():.1f} m/s"),
+                ("Filtered hours", f"{len(germany):,}"),
+                ("Main direction", f"{germany_direction} ({germany_direction_deg:.0f} deg)"),
+            ]
         )
+        insight("Germany gives the full-year wind pattern. Use it for seasonal wind and spread-direction context.")
+
+        left, right = st.columns([2, 1])
+        with left:
+            st.markdown("#### Wind Over Time")
+            svg_line_chart(germany.set_index("time_utc")[["wind10_mps_mean", "wind10_mps_p90"]], height=340)
+        with right:
+            st.markdown("#### Monthly Wind")
+            svg_bar_chart(data["germany_monthly"].set_index("month")["wind10_mps_mean"], height=340)
+
+        with st.expander("Wind direction"):
+            svg_bar_chart(direction_counts(germany, "wind_direction"), height=260)
+        with st.expander("Wind by location"):
+            map_data = data["germany_grid"].rename(columns={"latitude": "lat", "longitude": "lon"})
+            svg_scatter_chart(
+                map_data,
+                x="lon",
+                y="lat",
+                size="wind10_mps_mean",
+                color="wind10_mps_mean",
+                height=420,
+            )
+        with st.expander("Strongest wind locations"):
+            strongest = data["germany_grid"].sort_values("wind10_mps_mean", ascending=False).head(20)
+            html_table(
+                strongest.rename(
+                    columns={
+                        "latitude": "Latitude",
+                        "longitude": "Longitude",
+                        "wind10_mps_mean": "Average wind (m/s)",
+                        "wind10_mps_max": "Highest wind (m/s)",
+                        "wind10_mps_p90": "High-wind level (m/s)",
+                        "wind_direction": "Direction",
+                    }
+                )[
+                    [
+                        "Latitude",
+                        "Longitude",
+                        "Average wind (m/s)",
+                        "Highest wind (m/s)",
+                        "High-wind level (m/s)",
+                        "Direction",
+                    ]
+                ].round(3),
+                use_container_width=True,
+                hide_index=True,
+            )
 
 with patterns_tab:
     st.subheader("Pattern Finder")
@@ -1512,65 +1381,3 @@ with patterns_tab:
     )
     cycles = p_cycle.merge(g_cycle, on="hour")
     svg_line_chart(cycles.set_index("hour"), height=320)
-
-with simulation_tab:
-    st.subheader("Scenario Simulation")
-    st.write("Adjust the sliders to test simple weather scenarios.")
-    dataset = st.radio("Scenario dataset", ["Paris", "Germany"], horizontal=True)
-
-    if dataset == "Paris":
-        base = date_filter(data["paris"], "sim_paris_filter")
-        sim_direction_deg, sim_direction = main_wind_direction(base, "u10", "v10")
-        temp_shift = st.slider("Temperature shift (C)", -10.0, 10.0, 0.0, 0.5)
-        wind_factor = st.slider("Wind multiplier", 0.0, 3.0, 1.0, 0.05)
-        precip_factor = st.slider("Precipitation multiplier", 0.0, 5.0, 1.0, 0.1)
-        base["sim_temp_c"] = base["t2m_c"] + temp_shift
-        base["sim_wind_mps"] = base["wind10_mps"] * wind_factor
-        base["sim_precip_mm"] = base["tp_mm"] * precip_factor
-
-        metric_cards(
-            [
-                ("Sim mean temp", f"{base['sim_temp_c'].mean():.1f} C"),
-                ("Sim max temp", f"{base['sim_temp_c'].max():.1f} C"),
-                ("Sim rain", f"{base['sim_precip_mm'].sum():.1f} mm"),
-                ("Sim wind", f"{base['sim_wind_mps'].mean():.1f} m/s"),
-                ("Direction", f"{sim_direction} ({sim_direction_deg:.0f} deg)"),
-            ]
-        )
-        insight(
-            "Temperature shift changes heat. Wind and rain multipliers scale the original pattern."
-        )
-        svg_line_chart(base.set_index("time_utc")[["sim_temp_c", "sim_wind_mps", "sim_precip_mm"]], height=360)
-        st.download_button(
-            "Download simulated Paris CSV",
-            base.to_csv(index=False).encode("utf-8"),
-            "simulated_paris_weather.csv",
-            "text/csv",
-        )
-    else:
-        base = date_filter(data["germany"], "sim_germany_filter")
-        sim_direction_deg, sim_direction = main_wind_direction(base, "u10_mean", "v10_mean")
-        wind_factor = st.slider("Wind multiplier", 0.0, 3.0, 1.0, 0.05)
-        high_wind_boost = st.slider("High-wind boost", 0.0, 2.0, 1.0, 0.05)
-        base["sim_wind_mps"] = base["wind10_mps_mean"] * wind_factor
-        base["sim_p90_wind_mps"] = base["wind10_mps_p90"] * wind_factor * high_wind_boost
-
-        metric_cards(
-            [
-                ("Sim mean wind", f"{base['sim_wind_mps'].mean():.1f} m/s"),
-                ("Sim max wind", f"{base['sim_wind_mps'].max():.1f} m/s"),
-                ("Sim P90 wind", f"{base['sim_p90_wind_mps'].mean():.1f} m/s"),
-                ("Hours", f"{len(base):,}"),
-                ("Direction", f"{sim_direction} ({sim_direction_deg:.0f} deg)"),
-            ]
-        )
-        insight(
-            "Wind multiplier changes the whole year. High-wind boost raises stronger wind periods."
-        )
-        svg_line_chart(base.set_index("time_utc")[["sim_wind_mps", "sim_p90_wind_mps"]], height=360)
-        st.download_button(
-            "Download simulated Germany CSV",
-            base.to_csv(index=False).encode("utf-8"),
-            "simulated_germany_wind.csv",
-            "text/csv",
-        )
