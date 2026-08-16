@@ -169,28 +169,29 @@ st.markdown(
         color: #1e293b;
     }
     .topbar {
-        background: linear-gradient(135deg, rgba(8,47,73,0.92), rgba(6,78,59,0.90));
-        border: 1px solid rgba(94,234,212,0.20);
-        border-radius: 14px;
-        padding: 14px 16px;
-        margin: 4px 0 16px 0;
+        background: linear-gradient(135deg, rgba(15,23,42,0.78), rgba(6,78,59,0.52));
+        border: 1px solid rgba(148,163,184,0.18);
+        border-left: 4px solid #22c55e;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin: 10px 0 18px 0;
         color: #f8fafc;
         display: grid;
         grid-template-columns: minmax(280px, 1fr) auto;
         gap: 18px;
         align-items: center;
-        box-shadow: 0 18px 42px rgba(2, 6, 23, 0.24);
+        box-shadow: 0 14px 34px rgba(2, 6, 23, 0.22);
     }
     .topbar-title strong {
         display: block;
-        font-size: 1.28rem;
-        line-height: 1.1;
+        font-size: 1.55rem;
+        line-height: 1.25;
     }
     .topbar-title span {
         display: block;
-        color: #cbd5e1;
-        font-size: 0.86rem;
-        margin-top: 4px;
+        color: #dbeafe;
+        font-size: 0.92rem;
+        margin-top: 6px;
     }
     .topbar-chips {
         display: flex;
@@ -199,15 +200,15 @@ st.markdown(
         justify-content: flex-end;
     }
     .status-pill {
-        background: rgba(15,23,42,0.36);
-        border: 1px solid rgba(148,163,184,0.24);
+        background: rgba(15,23,42,0.48);
+        border: 1px solid rgba(125,211,252,0.22);
         border-radius: 999px;
         padding: 7px 10px;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         white-space: nowrap;
     }
     .status-pill span {
-        color: #93c5fd;
+        color: #7dd3fc;
         font-size: 0.74rem;
         margin-right: 5px;
     }
@@ -788,7 +789,6 @@ def compact_header() -> None:
           <div class='topbar-chips'>
             <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
             <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
-            <div class='status-pill'><span>Output</span><strong>Fire probability</strong></div>
           </div>
         </div>
         """,
