@@ -344,6 +344,19 @@ def direction_counts(frame: pd.DataFrame, direction_col: str) -> pd.Series:
     return frame[direction_col].value_counts().reindex(order, fill_value=0)
 
 
+def add_sensor_wind_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    enriched = frame.copy()
+    if "wind_direction_deg" not in enriched.columns:
+        enriched["wind_direction_deg"] = 235.0
+    if "wind_direction" not in enriched.columns:
+        enriched["wind_direction"] = enriched["wind_direction_deg"].apply(degrees_to_compass)
+    if "spread_direction_deg" not in enriched.columns:
+        enriched["spread_direction_deg"] = (enriched["wind_direction_deg"] + 180) % 360
+    if "spread_direction" not in enriched.columns:
+        enriched["spread_direction"] = enriched["spread_direction_deg"].apply(degrees_to_compass)
+    return enriched
+
+
 def add_fire_weather_columns(frame: pd.DataFrame) -> pd.DataFrame:
     enriched = frame.copy()
     enriched["relative_humidity_pct"] = relative_humidity(enriched["t2m_c"], enriched["d2m_c"])
@@ -373,7 +386,7 @@ def load_hurtgenwald_history(start_date, end_date):
 
 @st.cache_data(ttl=300)
 def load_sensor_demo(seed: int) -> pd.DataFrame:
-    return generate_sensor_demo(seed=seed)
+    return add_sensor_wind_columns(generate_sensor_demo(seed=seed))
 
 
 def format_signal_time(value: object) -> str:
@@ -884,7 +897,7 @@ with sensor_demo_tab:
 
     scenario = st.selectbox("Demo data mode", ["Fixed example", "New random reading"], key="sensor_scenario")
     seed = 42 if scenario == "Fixed example" else int(pd.Timestamp.now().timestamp()) % 100000
-    sensor_data = load_sensor_demo(seed)
+    sensor_data = add_sensor_wind_columns(load_sensor_demo(seed))
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
     hotspot_rows = sensor_data[sensor_data["sensor_id"] == highest["sensor_id"]].copy()
