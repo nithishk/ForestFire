@@ -99,6 +99,41 @@ st.markdown(
         padding: 7px 8px;
         border-bottom: 1px solid #e3e8ee;
     }
+    .risk-banner {
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin: 12px 0 18px 0;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .risk-banner h3 {
+        margin: 0 0 6px 0;
+        font-size: 1.35rem;
+    }
+    .risk-banner p {
+        margin: 0;
+        font-size: 0.95rem;
+    }
+    .risk-critical { background: #7f1d1d; color: #fff7ed; }
+    .risk-high { background: #9a3412; color: #fff7ed; }
+    .risk-watch { background: #854d0e; color: #fffbeb; }
+    .risk-low { background: #14532d; color: #f0fdf4; }
+    .signal-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px;
+        margin: 10px 0 18px 0;
+    }
+    .signal-card {
+        background: #f8fafc;
+        color: #132333;
+        border: 1px solid #dbe3ea;
+        border-radius: 8px;
+        padding: 12px;
+    }
+    .signal-card strong {
+        display: block;
+        margin-bottom: 5px;
+    }
     h1, h2, h3 { letter-spacing: 0; }
     </style>
     """,
@@ -356,6 +391,85 @@ def html_table(frame: pd.DataFrame, max_rows: int | None = None, **_: object) ->
     st.markdown(table.to_html(index=False, escape=True, classes="simple-table"), unsafe_allow_html=True)
 
 
+def risk_class(prediction: str) -> str:
+    return {
+        "Critical": "risk-critical",
+        "High": "risk-high",
+        "Watch": "risk-watch",
+        "Low": "risk-low",
+    }.get(prediction, "risk-low")
+
+
+def risk_color(prediction: str) -> str:
+    return {
+        "Critical": "#dc2626",
+        "High": "#f97316",
+        "Watch": "#facc15",
+        "Low": "#22c55e",
+    }.get(prediction, "#22c55e")
+
+
+def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float) -> None:
+    message = (
+        f"{sensor_id} at {zone} is showing the strongest fire signal. "
+        "This is a demo prediction from simulated sensor readings."
+    )
+    st.markdown(
+        "<div class='risk-banner "
+        f"{risk_class(prediction)}'>"
+        f"<h3>{escape(prediction)} risk · {probability:.0f}% probability</h3>"
+        f"<p>{escape(message)}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def sensor_network_view(latest: pd.DataFrame) -> None:
+    width = 900
+    height = 360
+    pad = 70
+    xmin, xmax = latest["lon"].min(), latest["lon"].max()
+    ymin, ymax = latest["lat"].min(), latest["lat"].max()
+    parts = [
+        f"<svg viewBox='0 0 {width} {height}' width='100%' height='{height}' role='img'>",
+        "<rect width='100%' height='100%' rx='8' fill='#f8fafc'/>",
+        "<rect x='35' y='35' width='830' height='290' rx='8' fill='none' stroke='#94a3b8' stroke-dasharray='10 8'/>",
+        "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Huertgenwald MVP sensor grid</text>",
+    ]
+    for row in latest.itertuples():
+        x = pad + ((row.lon - xmin) / max(xmax - xmin, 1e-9)) * (width - pad * 2)
+        y = pad + (1 - ((row.lat - ymin) / max(ymax - ymin, 1e-9))) * (height - pad * 2)
+        radius = 10 + (row.fire_probability_pct / 100) * 18
+        color = risk_color(row.prediction)
+        parts.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='{radius:.1f}' fill='{color}' opacity='0.82'/>")
+        parts.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='{radius + 5:.1f}' fill='none' stroke='{color}' opacity='0.25' stroke-width='4'/>")
+        parts.append(
+            f"<text x='{x + radius + 8:.1f}' y='{y - 3:.1f}' fill='#0f172a' font-size='13' font-weight='700'>{escape(row.sensor_id)}</text>"
+        )
+        parts.append(
+            f"<text x='{x + radius + 8:.1f}' y='{y + 13:.1f}' fill='#475569' font-size='12'>{escape(row.prediction)} · {row.fire_probability_pct:.0f}%</text>"
+        )
+    parts.append("<text x='50' y='342' fill='#475569' font-size='12'>Circle size and color represent predicted fire probability.</text>")
+    parts.append("</svg>")
+    st.markdown(f"<div class='svg-chart'>{''.join(parts)}</div>", unsafe_allow_html=True)
+
+
+def signal_cards() -> None:
+    items = [
+        ("Heat", "Higher temperature raises stress."),
+        ("Humidity", "Dry air increases ignition risk."),
+        ("Wind", "Wind supports faster spread."),
+        ("Smoke", "Smoke is the early warning signal."),
+        ("CO", "CO supports combustion detection."),
+        ("IR", "Infrared can indicate hot material."),
+    ]
+    cards = "".join(
+        f"<div class='signal-card'><strong>{escape(title)}</strong>{escape(body)}</div>"
+        for title, body in items
+    )
+    st.markdown(f"<div class='signal-grid'>{cards}</div>", unsafe_allow_html=True)
+
+
 def round_numeric(frame: pd.DataFrame, decimals: int = 2) -> pd.DataFrame:
     rounded = frame.copy()
     numeric_cols = rounded.select_dtypes(include="number").columns
@@ -544,9 +658,9 @@ with live_nrw_tab:
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
 
 with sensor_demo_tab:
-    st.subheader("Sensor Demo")
-    st.write("Simulated ground-sensor feed for MVP demo.")
-    note("This tab uses fake sensor data for demonstration. It is not live hardware data yet.")
+    st.subheader("Fire Prediction Demo")
+    st.write("Simulated ground-sensor feed for the CTRL-F MVP.")
+    note("Demo data only. This shows how live sensor readings would become a fire-risk prediction.")
 
     scenario = st.selectbox("Demo scenario", ["Normal with one hotspot", "Regenerate sample"], key="sensor_scenario")
     seed = 42 if scenario == "Normal with one hotspot" else int(pd.Timestamp.now().timestamp()) % 100000
@@ -554,36 +668,35 @@ with sensor_demo_tab:
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
 
+    risk_banner(
+        str(highest["sensor_id"]),
+        str(highest["zone"]),
+        str(highest["prediction"]),
+        float(highest["fire_probability_pct"]),
+    )
+
     metric_cards(
         [
-            ("Top risk sensor", f"{highest['sensor_id']}"),
-            ("Prediction", highest["prediction"]),
-            ("Fire probability", f"{highest['fire_probability_pct']:.0f}%"),
+            ("Sensor", f"{highest['sensor_id']}"),
+            ("Zone", str(highest["zone"])),
             ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
-            ("Wind", f"{highest['wind_kmh']:.1f} km/h"),
+            ("CO", f"{highest['co_ppm']:.1f} ppm"),
+            ("Battery", f"{highest['battery_pct']:.0f}%"),
         ]
     )
 
     insight(
-        f"{highest['sensor_id']} at {highest['zone']} is the current demo hotspot. "
-        "The score rises when smoke, CO, heat, low humidity, wind, and IR signal move together."
+        "The prediction rises when multiple signals move together: smoke, CO, heat, low humidity, wind, and IR."
     )
 
     left, right = st.columns([2, 1])
     with left:
         st.markdown("#### Sensor Network")
-        st.caption("Bigger points show higher predicted fire probability.")
-        sensor_points = latest.rename(columns={"lat": "Latitude", "lon": "Longitude"})
-        svg_scatter_chart(
-            sensor_points,
-            x="Longitude",
-            y="Latitude",
-            size="fire_probability_pct",
-            height=360,
-        )
+        st.caption("Risk level by sensor location.")
+        sensor_network_view(latest)
     with right:
         st.markdown("#### Latest Readings")
-        latest_table = latest[
+        latest_table = latest.sort_values("fire_probability_pct", ascending=False)[
             [
                 "sensor_id",
                 "zone",
@@ -611,28 +724,15 @@ with sensor_demo_tab:
         html_table(round_numeric(latest_table))
 
     st.markdown("#### Hotspot Timeline")
+    st.caption("The demo hotspot escalates as smoke, CO, and IR rise together.")
     hotspot_history = sensor_data[sensor_data["sensor_id"] == highest["sensor_id"]].set_index("time")
     svg_line_chart(
         hotspot_history[["fire_probability_pct", "temperature_c", "humidity_pct", "smoke_ppm", "co_ppm"]],
         height=360,
     )
 
-    st.markdown("#### Prediction Logic")
-    st.write(
-        "The demo score combines weather stress and sensor signals: heat, low humidity, wind, smoke, CO, and flame IR."
-    )
-    rule_table = pd.DataFrame(
-        [
-            ["Heat", "Higher temperature increases risk"],
-            ["Humidity", "Lower humidity increases risk"],
-            ["Wind", "Higher wind supports faster spread"],
-            ["Smoke", "Rising smoke is an early warning signal"],
-            ["CO", "Rising carbon monoxide supports combustion detection"],
-            ["IR", "Infrared signal can indicate flame or hot material"],
-        ],
-        columns=["Signal", "Meaning"],
-    )
-    html_table(rule_table)
+    st.markdown("#### Prediction Signals")
+    signal_cards()
 
 with historical_nrw_tab:
     st.subheader("Historical NRW: Hürtgenwald")
