@@ -238,6 +238,58 @@ st.markdown(
         margin: 0;
         color: #263746;
     }
+    .fire-console {
+        display: grid;
+        grid-template-columns: minmax(280px, 1.15fr) minmax(280px, 1fr);
+        gap: 12px;
+        margin: 12px 0 16px 0;
+    }
+    .fire-alert-card {
+        border-radius: 12px;
+        padding: 18px;
+        color: #fff7ed;
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+    }
+    .fire-alert-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 1.45rem;
+    }
+    .fire-alert-card p {
+        margin: 4px 0;
+        font-size: 0.95rem;
+    }
+    .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+        gap: 10px;
+    }
+    .evidence-tile {
+        background: #f8fafc;
+        color: #10212f;
+        border: 1px solid #dbe3ea;
+        border-radius: 10px;
+        padding: 13px 14px;
+        min-height: 76px;
+    }
+    .evidence-tile span {
+        display: block;
+        color: #475569;
+        font-size: 0.82rem;
+        margin-bottom: 7px;
+    }
+    .evidence-tile strong {
+        display: block;
+        font-size: 1.12rem;
+        line-height: 1.15;
+    }
+    .spread-tile {
+        border-left: 5px solid #2563eb;
+        background: #eef6ff;
+    }
+    @media (max-width: 900px) {
+        .fire-console { grid-template-columns: 1fr; }
+    }
     .color-legend {
         display: flex;
         flex-wrap: wrap;
@@ -691,6 +743,39 @@ def wind_spread_panel(row: pd.Series) -> None:
     )
 
 
+def fire_summary_panel(
+    row: pd.Series,
+    probability: float,
+    estimated_fire_time: object,
+    spread_direction: str,
+    wind_kmh: float,
+) -> None:
+    prediction = str(row.get("prediction", "Low"))
+    sensor_id = str(row.get("sensor_id", "Sensor"))
+    zone = str(row.get("zone", "Field zone"))
+    wind_direction = str(row.get("wind_direction", "SW"))
+    smoke_ppm = float(row.get("smoke_ppm", 0.0))
+    card_class = risk_class(prediction)
+    status = "Fire-risk signal detected" if prediction in {"Critical", "High"} else "Monitoring"
+    st.markdown(
+        "<div class='fire-console'>"
+        f"<div class='fire-alert-card {card_class}'>"
+        f"<h3>{escape(prediction)} risk - {probability:.0f}% probability</h3>"
+        f"<p><strong>{escape(sensor_id)}</strong> at <strong>{escape(zone)}</strong></p>"
+        f"<p>Estimated fire-risk time: <strong>{escape(format_signal_time(estimated_fire_time))}</strong></p>"
+        f"<p>{escape(status)}</p>"
+        "</div>"
+        "<div class='evidence-grid'>"
+        f"<div class='evidence-tile'><span>Sensor</span><strong>{escape(sensor_id)}</strong></div>"
+        f"<div class='evidence-tile'><span>Smoke</span><strong>{smoke_ppm:.1f} ppm</strong></div>"
+        f"<div class='evidence-tile'><span>Wind from</span><strong>{escape(wind_direction)} at {wind_kmh:.1f} km/h</strong></div>"
+        f"<div class='evidence-tile spread-tile'><span>Likely spread</span><strong>{escape(wind_direction)} -> {escape(spread_direction)}</strong></div>"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def risk_legend() -> None:
     items = [
         ("Low", "#22c55e"),
@@ -895,10 +980,11 @@ with live_nrw_tab:
 
 with sensor_demo_tab:
     st.subheader("Fire Prediction Demo")
-    st.write("Simulated ground-sensor feed for the CTRL-F MVP.")
-    note("Demo data only. This shows how live sensor readings would become a fire-risk prediction.")
+    st.write("Sensor + weather view for early fire-risk detection.")
 
-    scenario = st.selectbox("Demo data mode", ["Fixed example", "New random reading"], key="sensor_scenario")
+    with st.expander("Demo settings"):
+        note("Demo data only. This shows how live sensor readings would become a fire-risk prediction.")
+        scenario = st.selectbox("Demo data mode", ["Fixed example", "New random reading"], key="sensor_scenario")
     seed = 42 if scenario == "Fixed example" else int(pd.Timestamp.now().timestamp()) % 100000
     sensor_data = add_sensor_wind_columns(load_sensor_demo(seed))
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
@@ -910,35 +996,16 @@ with sensor_demo_tab:
     highest_wind_kmh = float(highest.get("wind_kmh", 0.0))
     highest_spread_direction = str(highest.get("spread_direction", "NE"))
 
-    risk_banner(
-        str(highest["sensor_id"]),
-        str(highest["zone"]),
-        str(highest["prediction"]),
+    fire_summary_panel(
+        highest,
         float(highest["fire_probability_pct"]),
         estimated_fire_time,
-    )
-    decision_panel(
-        str(highest["sensor_id"]),
-        str(highest["zone"]),
-        str(highest["prediction"]),
-        float(highest["fire_probability_pct"]),
-        estimated_fire_time,
-    )
-    wind_spread_panel(highest)
-
-    metric_cards(
-        [
-            ("Sensor", f"{highest['sensor_id']}"),
-            ("Zone", str(highest["zone"])),
-            ("Estimated risk time", format_signal_time(estimated_fire_time)),
-            ("Wind", f"{highest_wind_kmh:.1f} km/h"),
-            ("Spread toward", highest_spread_direction),
-            ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
-        ]
+        highest_spread_direction,
+        highest_wind_kmh,
     )
 
     insight(
-        "The prediction rises when multiple signals move together: smoke, CO, heat, low humidity, wind, and IR."
+        "Why this matters: the sensor flags the hotspot, and wind direction shows where spread may move next."
     )
 
     st.markdown("#### Sensor Network")
