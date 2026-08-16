@@ -303,6 +303,37 @@ st.markdown(
         border-left: 5px solid #2563eb;
         background: #eef6ff;
     }
+    .rule-panel {
+        background: #f8fafc;
+        border: 1px solid #dbe3ea;
+        border-radius: 10px;
+        padding: 14px;
+        color: #10212f;
+    }
+    .rule-verdict {
+        border-radius: 8px;
+        padding: 11px 12px;
+        margin-bottom: 10px;
+        font-weight: 800;
+    }
+    .rule-clear { background: #dcfce7; color: #166534; }
+    .rule-watch { background: #fef9c3; color: #854d0e; }
+    .rule-alert { background: #fee2e2; color: #991b1b; }
+    .rule-list {
+        display: grid;
+        gap: 8px;
+    }
+    .rule-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 7px;
+        font-size: 0.92rem;
+    }
+    .rule-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .rule-row span { color: #475569; }
+    .rule-row strong { color: #0f172a; }
     @media (max-width: 900px) {
         .fire-console { grid-template-columns: 1fr; }
     }
@@ -797,20 +828,37 @@ def fire_summary_panel(
 
 
 def rule_check_tiles(weather: pd.DataFrame) -> None:
-    checks = [
-        ("Temperature", ">= 30 C", int((weather["temperature_c"] >= 30).sum())),
-        ("Humidity", "<= 30%", int((weather["humidity_pct"] <= 30).sum())),
-        ("Wind", ">= 30 km/h", int((weather["wind_kmh"] >= 30).sum())),
-        ("All together", "30-30-30", int(weather["fire_30_30_30"].sum())),
+    hot_hours = int((weather["temperature_c"] >= 30).sum())
+    dry_hours = int((weather["humidity_pct"] <= 30).sum())
+    windy_hours = int((weather["wind_kmh"] >= 30).sum())
+    rule_hours = int(weather["fire_30_30_30"].sum())
+    near_hours = int((weather["fire_weather_score"] >= 2).sum())
+    if rule_hours:
+        verdict = f"30-30-30 window forecast: {rule_hours} hours"
+        verdict_class = "rule-alert"
+    elif near_hours:
+        verdict = f"Near-risk weather: {near_hours} hours"
+        verdict_class = "rule-watch"
+    else:
+        verdict = "No 30-30-30 window forecast"
+        verdict_class = "rule-clear"
+    rows = [
+        ("Heat above 30 C", hot_hours),
+        ("Humidity below 30%", dry_hours),
+        ("Wind above 30 km/h", windy_hours),
+        ("All three together", rule_hours),
     ]
-    cards = "".join(
-        "<div class='evidence-tile'>"
-        f"<span>{escape(label)} {escape(rule)}</span>"
-        f"<strong>{hours} hours</strong>"
-        "</div>"
-        for label, rule, hours in checks
+    row_html = "".join(
+        f"<div class='rule-row'><span>{escape(label)}</span><strong>{hours} h</strong></div>"
+        for label, hours in rows
     )
-    st.markdown(f"<div class='evidence-grid'>{cards}</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='rule-panel'>"
+        f"<div class='rule-verdict {verdict_class}'>{escape(verdict)}</div>"
+        f"<div class='rule-list'>{row_html}</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def risk_legend() -> None:
