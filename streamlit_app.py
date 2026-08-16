@@ -120,7 +120,7 @@ st.markdown(
     .risk-low { background: linear-gradient(135deg, #166534, #22c55e); color: #f0fdf4; }
     .signal-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 10px;
         margin: 10px 0 18px 0;
     }
@@ -129,11 +129,27 @@ st.markdown(
         color: #132333;
         border: 1px solid #dbe3ea;
         border-radius: 8px;
-        padding: 12px;
+        padding: 12px 14px;
     }
     .signal-card strong {
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
+        font-size: 1rem;
+    }
+    .signal-card p {
+        margin: 0;
+        color: #475569;
+        font-size: 0.9rem;
+    }
+    .signal-badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        margin-bottom: 8px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        background: #e2e8f0;
+        color: #1e293b;
     }
     .hero {
         background: linear-gradient(135deg, #092018 0%, #123524 45%, #7f1d1d 100%);
@@ -669,16 +685,20 @@ def sensor_network_view(latest: pd.DataFrame) -> None:
 
 def signal_cards() -> None:
     items = [
-        ("Heat", "Higher temperature raises stress."),
-        ("Humidity", "Dry air increases ignition risk."),
-        ("Wind", "Wind supports faster spread."),
-        ("Smoke", "Smoke is the early warning signal."),
-        ("CO", "CO supports combustion detection."),
-        ("IR", "Infrared can indicate hot material."),
+        ("Early signal", "Smoke", "Smoke rising near one sensor is the first warning sign."),
+        ("Confirmation", "CO", "CO helps confirm that the signal may be combustion, not only dust or fog."),
+        ("Heat stress", "Temperature", "Higher temperature makes dry vegetation easier to ignite."),
+        ("Dry fuel", "Humidity", "Low humidity means leaves and ground fuel dry faster."),
+        ("Spread", "Wind", "Wind direction shows where flames or smoke may move next."),
+        ("Hot material", "Infrared", "IR can indicate hot ground, flame, or heated material near the sensor."),
     ]
     cards = "".join(
-        f"<div class='signal-card'><strong>{escape(title)}</strong>{escape(body)}</div>"
-        for title, body in items
+        "<div class='signal-card'>"
+        f"<span class='signal-badge'>{escape(badge)}</span>"
+        f"<strong>{escape(title)}</strong>"
+        f"<p>{escape(body)}</p>"
+        "</div>"
+        for badge, title, body in items
     )
     st.markdown(f"<div class='signal-grid'>{cards}</div>", unsafe_allow_html=True)
 
