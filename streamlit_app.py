@@ -822,8 +822,8 @@ with sensor_demo_tab:
     st.write("Simulated ground-sensor feed for the CTRL-F MVP.")
     note("Demo data only. This shows how live sensor readings would become a fire-risk prediction.")
 
-    scenario = st.selectbox("Demo scenario", ["Normal with one hotspot", "Regenerate sample"], key="sensor_scenario")
-    seed = 42 if scenario == "Normal with one hotspot" else int(pd.Timestamp.now().timestamp()) % 100000
+    scenario = st.selectbox("Demo data mode", ["Fixed example", "New random reading"], key="sensor_scenario")
+    seed = 42 if scenario == "Fixed example" else int(pd.Timestamp.now().timestamp()) % 100000
     sensor_data = load_sensor_demo(seed)
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
@@ -1385,13 +1385,3 @@ with simulation_tab:
             "simulated_germany_wind.csv",
             "text/csv",
         )
-
-with st.expander("Files created"):
-    st.write(
-        {
-            "Excel workbook": str(DATA_DIR / "weather_analysis_workbook.xlsx"),
-            "Pattern report": str(DATA_DIR / "weather_pattern_analysis.md"),
-            "Paris CSV": str(DATA_DIR / "paris_hourly_area_mean.csv"),
-            "Germany CSV": str(DATA_DIR / "germany_hourly_area_mean.csv"),
-        }
-    )
