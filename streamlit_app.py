@@ -20,7 +20,21 @@ st.set_page_config(page_title="Weather Pattern Dashboard", layout="wide")
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 1.4rem; }
+    .stApp {
+        background:
+            radial-gradient(circle at 12% 0%, rgba(34,197,94,0.10), transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(220,38,38,0.12), transparent 30%),
+            #090d13;
+    }
+    .block-container { padding-top: 1.1rem; }
+    [data-baseweb="tab-list"] {
+        gap: 6px;
+        border-bottom: 1px solid #26313d;
+    }
+    [data-baseweb="tab"] {
+        border-radius: 8px 8px 0 0;
+        padding: 8px 10px;
+    }
     [data-testid="stMetric"] {
         background: #f6f8fa;
         border: 1px solid #dbe3ea;
@@ -36,17 +50,17 @@ st.markdown(
         color: #10212f !important;
     }
     .insight-box {
-        background: #eef7f3;
-        border: 1px solid #c7e4d8;
-        color: #17382c;
+        background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+        border: 1px solid #a7f3d0;
+        color: #12382a;
         border-radius: 8px;
         padding: 12px 14px;
         margin: 8px 0 14px 0;
     }
     .insight-box strong { color: #0d2f23; }
     .note-box {
-        background: #fff8e8;
-        border: 1px solid #f0d391;
+        background: linear-gradient(135deg, #fff7ed, #fef3c7);
+        border: 1px solid #fbbf24;
         color: #4b3410;
         border-radius: 8px;
         padding: 12px 14px;
@@ -60,10 +74,11 @@ st.markdown(
         margin: 10px 0 18px 0;
     }
     .metric-card {
-        background: #f6f8fa;
-        border: 1px solid #dbe3ea;
+        background: linear-gradient(180deg, #ffffff, #f1f5f9);
+        border: 1px solid #d8e1ea;
         border-radius: 8px;
         padding: 12px 14px;
+        box-shadow: 0 10px 24px rgba(2, 6, 23, 0.10);
     }
     .metric-label {
         color: #263746;
@@ -77,11 +92,12 @@ st.markdown(
         line-height: 1.2;
     }
     .svg-chart {
-        background: #f8fafc;
-        border: 1px solid #dbe3ea;
+        background: linear-gradient(180deg, #ffffff, #f5f8fb);
+        border: 1px solid #d7e1ea;
         border-radius: 8px;
         padding: 8px;
         margin: 8px 0 16px 0;
+        box-shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
     }
     .simple-table {
         width: 100%;
@@ -125,11 +141,12 @@ st.markdown(
         margin: 10px 0 18px 0;
     }
     .signal-card {
-        background: #f8fafc;
+        background: linear-gradient(180deg, #ffffff, #f3f7fb);
         color: #132333;
-        border: 1px solid #dbe3ea;
+        border: 1px solid #d8e2ec;
         border-radius: 8px;
         padding: 12px 14px;
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.08);
     }
     .signal-card strong {
         display: block;
@@ -148,14 +165,14 @@ st.markdown(
         margin-bottom: 8px;
         font-size: 0.74rem;
         font-weight: 700;
-        background: #e2e8f0;
+        background: #dbeafe;
         color: #1e293b;
     }
     .topbar {
-        background: #0d1714;
-        border: 1px solid #1f3b31;
-        border-radius: 10px;
-        padding: 12px 14px;
+        background: linear-gradient(135deg, rgba(6,78,59,0.96), rgba(15,23,42,0.96) 52%, rgba(127,29,29,0.92));
+        border: 1px solid rgba(148,163,184,0.18);
+        border-radius: 12px;
+        padding: 13px 15px;
         margin: 4px 0 14px 0;
         color: #f8fafc;
         display: grid;
@@ -175,10 +192,11 @@ st.markdown(
         margin-top: 4px;
     }
     .status-pill {
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.18);
         border-radius: 8px;
         padding: 8px 10px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }
     .status-pill span {
         display: block;
@@ -194,7 +212,7 @@ st.markdown(
         .topbar { grid-template-columns: 1fr; }
     }
     .decision-panel {
-        background: #f8fafc;
+        background: linear-gradient(180deg, #ffffff, #f5f7fb);
         border: 1px solid #dbe3ea;
         border-left: 5px solid #dc2626;
         border-radius: 10px;
@@ -232,7 +250,7 @@ st.markdown(
     .chip-watch { background: #fef9c3; color: #854d0e; }
     .chip-low { background: #dcfce7; color: #166534; }
     .spread-box {
-        background: #eef6ff;
+        background: linear-gradient(135deg, #eff6ff, #e0f2fe);
         border: 1px solid #bfdbfe;
         border-left: 5px solid #2563eb;
         border-radius: 10px;
@@ -275,12 +293,13 @@ st.markdown(
         gap: 10px;
     }
     .evidence-tile {
-        background: #f8fafc;
+        background: linear-gradient(180deg, #ffffff, #f5f8fb);
         color: #10212f;
         border: 1px solid #dbe3ea;
         border-radius: 10px;
         padding: 13px 14px;
         min-height: 76px;
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.08);
     }
     .evidence-tile span {
         display: block;
@@ -295,14 +314,15 @@ st.markdown(
     }
     .spread-tile {
         border-left: 5px solid #2563eb;
-        background: #eef6ff;
+        background: linear-gradient(135deg, #eff6ff, #e0f2fe);
     }
     .rule-panel {
-        background: #f8fafc;
+        background: linear-gradient(180deg, #ffffff, #f5f8fb);
         border: 1px solid #dbe3ea;
         border-radius: 10px;
         padding: 14px;
         color: #10212f;
+        box-shadow: 0 10px 22px rgba(2, 6, 23, 0.10);
     }
     .rule-verdict {
         border-radius: 8px;
