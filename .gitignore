@@ -34,3 +34,4 @@ outputs/weather_analysis/*
 !outputs/weather_analysis/germany_monthly_summary.csv
 !outputs/weather_analysis/germany_grid_cell_summary.csv
 working/
+Notes

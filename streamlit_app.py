@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 
 import numpy as np
@@ -51,6 +52,52 @@ st.markdown(
         margin: 8px 0 14px 0;
     }
     .note-box strong { color: #3a2609; }
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin: 10px 0 18px 0;
+    }
+    .metric-card {
+        background: #f6f8fa;
+        border: 1px solid #dbe3ea;
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+    .metric-label {
+        color: #263746;
+        font-size: 0.86rem;
+        margin-bottom: 8px;
+    }
+    .metric-value {
+        color: #10212f;
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .svg-chart {
+        background: #f8fafc;
+        border: 1px solid #dbe3ea;
+        border-radius: 8px;
+        padding: 8px;
+        margin: 8px 0 16px 0;
+    }
+    .simple-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    .simple-table th {
+        background: #e8eef3;
+        color: #152536;
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #cbd5df;
+    }
+    .simple-table td {
+        padding: 7px 8px;
+        border-bottom: 1px solid #e3e8ee;
+    }
     h1, h2, h3 { letter-spacing: 0; }
     </style>
     """,
@@ -165,9 +212,137 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
 
 
 def metric_cards(items: list[tuple[str, str]]) -> None:
-    cols = st.columns(len(items))
-    for col, (label, value) in zip(cols, items):
-        col.metric(label, value)
+    cards = "".join(
+        "<div class='metric-card'>"
+        f"<div class='metric-label'>{escape(label)}</div>"
+        f"<div class='metric-value'>{escape(value)}</div>"
+        "</div>"
+        for label, value in items
+    )
+    st.markdown(f"<div class='metric-grid'>{cards}</div>", unsafe_allow_html=True)
+
+
+def _numeric_frame(data: pd.DataFrame | pd.Series) -> pd.DataFrame:
+    if isinstance(data, pd.Series):
+        frame = data.to_frame(name=data.name or "Value")
+    else:
+        frame = data.copy()
+    return frame.apply(pd.to_numeric, errors="coerce")
+
+
+def svg_line_chart(data: pd.DataFrame | pd.Series, height: int = 300) -> None:
+    frame = _numeric_frame(data).dropna(how="all")
+    if frame.empty:
+        st.info("No chart data available.")
+        return
+    width = 900
+    pad = 42
+    plot_w = width - pad * 2
+    plot_h = height - pad * 2
+    values = frame.to_numpy(dtype=float)
+    finite = values[np.isfinite(values)]
+    ymin, ymax = (float(finite.min()), float(finite.max())) if finite.size else (0.0, 1.0)
+    if ymin == ymax:
+        ymin -= 1
+        ymax += 1
+    colors = ["#2563eb", "#dc2626", "#16a34a", "#f59e0b", "#7c3aed", "#0891b2"]
+    parts = [
+        f"<svg viewBox='0 0 {width} {height}' width='100%' height='{height}' role='img'>",
+        "<rect width='100%' height='100%' fill='#f8fafc'/>",
+        f"<line x1='{pad}' y1='{height-pad}' x2='{width-pad}' y2='{height-pad}' stroke='#cbd5df'/>",
+        f"<line x1='{pad}' y1='{pad}' x2='{pad}' y2='{height-pad}' stroke='#cbd5df'/>",
+    ]
+    n = max(len(frame) - 1, 1)
+    for idx, col in enumerate(frame.columns):
+        points = []
+        for i, value in enumerate(frame[col].to_numpy(dtype=float)):
+            if np.isfinite(value):
+                x = pad + (i / n) * plot_w
+                y = pad + (1 - ((value - ymin) / (ymax - ymin))) * plot_h
+                points.append(f"{x:.1f},{y:.1f}")
+        if len(points) > 1:
+            parts.append(
+                f"<polyline fill='none' stroke='{colors[idx % len(colors)]}' stroke-width='2.5' points='{' '.join(points)}'/>"
+            )
+    legend_x = pad
+    for idx, col in enumerate(frame.columns):
+        y = 18 + idx * 18
+        parts.append(f"<circle cx='{legend_x}' cy='{y}' r='5' fill='{colors[idx % len(colors)]}'/>")
+        parts.append(f"<text x='{legend_x + 10}' y='{y + 4}' fill='#152536' font-size='13'>{escape(str(col))}</text>")
+        legend_x += 170
+    parts.append(f"<text x='{pad}' y='{height - 10}' fill='#475569' font-size='12'>min {ymin:.1f}</text>")
+    parts.append(f"<text x='{width - pad - 80}' y='{height - 10}' fill='#475569' font-size='12'>max {ymax:.1f}</text>")
+    parts.append("</svg>")
+    st.markdown(f"<div class='svg-chart'>{''.join(parts)}</div>", unsafe_allow_html=True)
+
+
+def svg_bar_chart(data: pd.Series | dict, height: int = 300) -> None:
+    series = pd.Series(data).apply(pd.to_numeric, errors="coerce").fillna(0)
+    if series.empty:
+        st.info("No chart data available.")
+        return
+    width = 900
+    pad = 42
+    plot_w = width - pad * 2
+    plot_h = height - pad * 2
+    ymax = max(float(series.max()), 1.0)
+    bar_w = plot_w / len(series)
+    parts = [
+        f"<svg viewBox='0 0 {width} {height}' width='100%' height='{height}' role='img'>",
+        "<rect width='100%' height='100%' fill='#f8fafc'/>",
+        f"<line x1='{pad}' y1='{height-pad}' x2='{width-pad}' y2='{height-pad}' stroke='#cbd5df'/>",
+    ]
+    for i, (label, value) in enumerate(series.items()):
+        h = (float(value) / ymax) * plot_h
+        x = pad + i * bar_w + bar_w * 0.15
+        y = height - pad - h
+        parts.append(f"<rect x='{x:.1f}' y='{y:.1f}' width='{bar_w*0.7:.1f}' height='{h:.1f}' fill='#2563eb'/>")
+        parts.append(f"<text x='{x + bar_w*0.35:.1f}' y='{height - 16}' fill='#334155' font-size='11' text-anchor='middle'>{escape(str(label))[:12]}</text>")
+        parts.append(f"<text x='{x + bar_w*0.35:.1f}' y='{max(y - 6, 14):.1f}' fill='#152536' font-size='11' text-anchor='middle'>{float(value):.1f}</text>")
+    parts.append("</svg>")
+    st.markdown(f"<div class='svg-chart'>{''.join(parts)}</div>", unsafe_allow_html=True)
+
+
+def svg_scatter_chart(
+    frame: pd.DataFrame,
+    x: str,
+    y: str,
+    size: str,
+    height: int = 420,
+    **_: object,
+) -> None:
+    data = frame[[x, y, size]].dropna()
+    if data.empty:
+        st.info("No chart data available.")
+        return
+    width = 900
+    pad = 44
+    plot_w = width - pad * 2
+    plot_h = height - pad * 2
+    xmin, xmax = data[x].min(), data[x].max()
+    ymin, ymax = data[y].min(), data[y].max()
+    smin, smax = data[size].min(), data[size].max()
+    parts = [
+        f"<svg viewBox='0 0 {width} {height}' width='100%' height='{height}' role='img'>",
+        "<rect width='100%' height='100%' fill='#f8fafc'/>",
+        f"<line x1='{pad}' y1='{height-pad}' x2='{width-pad}' y2='{height-pad}' stroke='#cbd5df'/>",
+        f"<line x1='{pad}' y1='{pad}' x2='{pad}' y2='{height-pad}' stroke='#cbd5df'/>",
+    ]
+    for row in data.itertuples(index=False):
+        xv, yv, sv = row
+        px = pad + ((xv - xmin) / max(xmax - xmin, 1e-9)) * plot_w
+        py = pad + (1 - ((yv - ymin) / max(ymax - ymin, 1e-9))) * plot_h
+        radius = 3 + ((sv - smin) / max(smax - smin, 1e-9)) * 8
+        parts.append(f"<circle cx='{px:.1f}' cy='{py:.1f}' r='{radius:.1f}' fill='#2563eb' opacity='0.55'/>")
+    parts.append(f"<text x='{pad}' y='{height - 10}' fill='#475569' font-size='12'>{escape(x)}</text>")
+    parts.append(f"<text x='12' y='{pad}' fill='#475569' font-size='12'>{escape(y)}</text>")
+    parts.append("</svg>")
+    st.markdown(f"<div class='svg-chart'>{''.join(parts)}</div>", unsafe_allow_html=True)
+
+
+def html_table(frame: pd.DataFrame, max_rows: int | None = None, **_: object) -> None:
+    table = frame.head(max_rows) if max_rows else frame
+    st.markdown(table.to_html(index=False, escape=True, classes="simple-table"), unsafe_allow_html=True)
 
 
 def insight(text: str) -> None:
@@ -242,7 +417,7 @@ with overview_tab:
             "Warm overall. Rain is concentrated at the start of the period."
         )
         st.caption("Temperature and wind over time.")
-        st.line_chart(
+        svg_line_chart(
             data["paris"].set_index("time_utc")[["t2m_c", "wind10_mps"]],
             height=300,
         )
@@ -250,7 +425,7 @@ with overview_tab:
         st.markdown("#### Germany")
         st.write("Full-year wind data. October is the windiest month.")
         st.caption("Average wind by month.")
-        st.bar_chart(
+        svg_bar_chart(
             data["germany_monthly"].set_index("month")["wind10_mps_mean"],
             height=300,
         )
@@ -289,7 +464,7 @@ with live_nrw_tab:
         with left:
             st.markdown("#### Forecast Inputs")
             st.caption("Temperature, humidity, wind, and rain for Hürtgenwald.")
-            st.line_chart(
+            svg_line_chart(
                 live_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
                 height=360,
             )
@@ -303,11 +478,11 @@ with live_nrw_tab:
                     "All 3 together": int(live_weather["fire_30_30_30"].sum()),
                 }
             )
-            st.bar_chart(rule_counts, height=360)
+            svg_bar_chart(rule_counts, height=360)
 
         st.markdown("#### Wind Direction")
         st.caption("Wind direction matters for possible fire spread.")
-        st.bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
+        svg_bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
 
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
         st.caption("EFFIS WMS layer for the Hürtgenwald/NRW area.")
@@ -319,7 +494,7 @@ with live_nrw_tab:
                 risk_label(int(row.fire_weather_score), bool(row.fire_30_30_30))
                 for row in table.itertuples()
             ]
-            st.dataframe(
+            html_table(
                 table.rename(
                     columns={
                         "time": "Time",
@@ -374,11 +549,11 @@ with paris_tab:
     with left:
         st.markdown("#### Hourly Trend")
         st.caption("Temperature, dew point, wind, and rain.")
-        st.line_chart(paris.set_index("time_utc")[["t2m_c", "d2m_c", "wind10_mps", "tp_mm"]], height=360)
+        svg_line_chart(paris.set_index("time_utc")[["t2m_c", "d2m_c", "wind10_mps", "tp_mm"]], height=360)
     with right:
         st.markdown("#### Daily Labels")
         st.caption("Hot, rainy, windy, or mild/dry.")
-        st.dataframe(
+        html_table(
             friendly_daily_table(daily[
                 [
                     "date",
@@ -395,7 +570,7 @@ with paris_tab:
 
     st.markdown("#### Wind Direction")
     st.caption("How often the wind came from each compass direction.")
-    st.bar_chart(direction_counts(paris, "wind_direction"), height=260)
+    svg_bar_chart(direction_counts(paris, "wind_direction"), height=260)
 
     st.markdown("#### Daily Cycle")
     st.caption("Average by hour.")
@@ -404,14 +579,14 @@ with paris_tab:
         wind_mps=("wind10_mps", "mean"),
         rain_mm=("tp_mm", "mean"),
     )
-    st.line_chart(
+    svg_line_chart(
         cycle.rename(columns={"temp_c": "Temperature (C)", "wind_mps": "Wind (m/s)", "rain_mm": "Rain (mm)"})
         .set_index("hour"),
         height=300,
     )
 
     with st.expander("Show detailed Paris rows"):
-        st.dataframe(paris.round(2), use_container_width=True, hide_index=True)
+        html_table(paris.round(2), use_container_width=True, hide_index=True)
 
 with germany_tab:
     st.subheader("Germany Wind")
@@ -436,20 +611,20 @@ with germany_tab:
     with left:
         st.markdown("#### Wind Over Time")
         st.caption("Average wind and high-wind level.")
-        st.line_chart(germany.set_index("time_utc")[["wind10_mps_mean", "wind10_mps_p90"]], height=360)
+        svg_line_chart(germany.set_index("time_utc")[["wind10_mps_mean", "wind10_mps_p90"]], height=360)
     with right:
         st.markdown("#### Monthly Wind")
         st.caption("Seasonal pattern.")
-        st.bar_chart(data["germany_monthly"].set_index("month")["wind10_mps_mean"], height=360)
+        svg_bar_chart(data["germany_monthly"].set_index("month")["wind10_mps_mean"], height=360)
 
     st.markdown("#### Wind Direction")
     st.caption("How often the average wind came from each compass direction.")
-    st.bar_chart(direction_counts(germany, "wind_direction"), height=260)
+    svg_bar_chart(direction_counts(germany, "wind_direction"), height=260)
 
     st.markdown("#### Wind By Location")
     st.caption("Bigger and darker points are windier.")
     map_data = data["germany_grid"].rename(columns={"latitude": "lat", "longitude": "lon"})
-    st.scatter_chart(
+    svg_scatter_chart(
         map_data,
         x="lon",
         y="lat",
@@ -460,7 +635,7 @@ with germany_tab:
 
     with st.expander("Show strongest wind locations"):
         strongest = data["germany_grid"].sort_values("wind10_mps_mean", ascending=False).head(20)
-        st.dataframe(
+        html_table(
             strongest.rename(
                 columns={
                     "latitude": "Latitude",
@@ -512,7 +687,7 @@ with wildfire_tab:
     with left:
         st.markdown("#### Fire Weather Inputs")
         st.caption("Temperature, relative humidity, and wind speed in km/h.")
-        st.line_chart(
+        svg_line_chart(
             fire.set_index("time_utc")[["t2m_c", "relative_humidity_pct", "wind10_kmh"]],
             height=360,
         )
@@ -526,11 +701,11 @@ with wildfire_tab:
                 "All 3 together": fire_hours,
             }
         )
-        st.bar_chart(rule_counts, height=360)
+        svg_bar_chart(rule_counts, height=360)
 
     st.markdown("#### Wind Direction")
     st.caption("Important for understanding possible spread direction.")
-    st.bar_chart(direction_counts(fire, "wind_direction"), height=260)
+    svg_bar_chart(direction_counts(fire, "wind_direction"), height=260)
 
     st.markdown("#### Daily Fire Weather Summary")
     fire_daily = (
@@ -555,10 +730,10 @@ with wildfire_tab:
             }
         )
     )
-    st.dataframe(fire_daily.round(2), use_container_width=True, hide_index=True)
+    html_table(fire_daily.round(2), use_container_width=True, hide_index=True)
 
     with st.expander("Show hourly fire-weather data"):
-        st.dataframe(
+        html_table(
             fire[
                 [
                     "time_utc",
@@ -603,7 +778,7 @@ with patterns_tab:
         st.write(f"Hottest day: **{hottest['date'].date()}**, {hottest['temp_c_max']:.1f} C")
         st.write(f"Wettest day: **{wettest['date'].date()}**, {wettest['precipitation_mm_total']:.1f} mm")
         st.write(f"Windiest day: **{windiest['date'].date()}**, {windiest['wind10_mps_mean']:.1f} m/s")
-        st.dataframe(friendly_daily_table(paris_daily), use_container_width=True, hide_index=True)
+        html_table(friendly_daily_table(paris_daily), use_container_width=True, hide_index=True)
 
     with col2:
         st.markdown("#### Germany standouts")
@@ -613,7 +788,7 @@ with patterns_tab:
         st.write(f"Windiest month: **{windiest_month['month']}**, {windiest_month['wind10_mps_mean']:.1f} m/s")
         st.write(f"Calmest month: **{calmest_month['month']}**, {calmest_month['wind10_mps_mean']:.1f} m/s")
         st.write(f"Windiest day: **{windiest_day['date'].date()}**, {windiest_day['wind10_mps_mean']:.1f} m/s")
-        st.dataframe(
+        html_table(
             germany_monthly.rename(
                 columns={
                     "month": "Month",
@@ -641,7 +816,7 @@ with patterns_tab:
         .rename(columns={"wind10_mps_mean": "Germany wind m/s"})
     )
     cycles = p_cycle.merge(g_cycle, on="hour")
-    st.line_chart(cycles.set_index("hour"), height=320)
+    svg_line_chart(cycles.set_index("hour"), height=320)
 
 with simulation_tab:
     st.subheader("Scenario Simulation")
@@ -670,7 +845,7 @@ with simulation_tab:
         insight(
             "Temperature shift changes heat. Wind and rain multipliers scale the original pattern."
         )
-        st.line_chart(base.set_index("time_utc")[["sim_temp_c", "sim_wind_mps", "sim_precip_mm"]], height=360)
+        svg_line_chart(base.set_index("time_utc")[["sim_temp_c", "sim_wind_mps", "sim_precip_mm"]], height=360)
         st.download_button(
             "Download simulated Paris CSV",
             base.to_csv(index=False).encode("utf-8"),
@@ -697,7 +872,7 @@ with simulation_tab:
         insight(
             "Wind multiplier changes the whole year. High-wind boost raises stronger wind periods."
         )
-        st.line_chart(base.set_index("time_utc")[["sim_wind_mps", "sim_p90_wind_mps"]], height=360)
+        svg_line_chart(base.set_index("time_utc")[["sim_wind_mps", "sim_p90_wind_mps"]], height=360)
         st.download_button(
             "Download simulated Germany CSV",
             base.to_csv(index=False).encode("utf-8"),
