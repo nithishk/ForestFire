@@ -677,12 +677,15 @@ def decision_panel(sensor_id: str, zone: str, prediction: str, probability: floa
 
 
 def wind_spread_panel(row: pd.Series) -> None:
+    wind_direction = str(row.get("wind_direction", "SW"))
+    spread_direction = str(row.get("spread_direction", "NE"))
+    wind_kmh = float(row.get("wind_kmh", 0.0))
     st.markdown(
         "<div class='spread-box'>"
         "<h4>Wind impact</h4>"
-        f"<p>Wind is coming from <strong>{escape(str(row['wind_direction']))}</strong> "
-        f"at <strong>{float(row['wind_kmh']):.1f} km/h</strong>. "
-        f"If ignition starts, likely spread is toward <strong>{escape(str(row['spread_direction']))}</strong>.</p>"
+        f"<p>Wind is coming from <strong>{escape(wind_direction)}</strong> "
+        f"at <strong>{wind_kmh:.1f} km/h</strong>. "
+        f"If ignition starts, likely spread is toward <strong>{escape(spread_direction)}</strong>.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -904,6 +907,8 @@ with sensor_demo_tab:
     critical_rows = hotspot_rows[hotspot_rows["prediction"] == "Critical"]
     first_critical = None if critical_rows.empty else critical_rows.sort_values("time").iloc[0]
     estimated_fire_time = highest["time"] if first_critical is None else first_critical["time"]
+    highest_wind_kmh = float(highest.get("wind_kmh", 0.0))
+    highest_spread_direction = str(highest.get("spread_direction", "NE"))
 
     risk_banner(
         str(highest["sensor_id"]),
@@ -926,8 +931,8 @@ with sensor_demo_tab:
             ("Sensor", f"{highest['sensor_id']}"),
             ("Zone", str(highest["zone"])),
             ("Estimated risk time", format_signal_time(estimated_fire_time)),
-            ("Wind", f"{highest['wind_kmh']:.1f} km/h"),
-            ("Spread toward", str(highest["spread_direction"])),
+            ("Wind", f"{highest_wind_kmh:.1f} km/h"),
+            ("Spread toward", highest_spread_direction),
             ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
         ]
     )
