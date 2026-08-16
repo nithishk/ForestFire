@@ -169,16 +169,17 @@ st.markdown(
         color: #1e293b;
     }
     .topbar {
-        background: linear-gradient(135deg, rgba(6,78,59,0.96), rgba(15,23,42,0.96) 52%, rgba(127,29,29,0.92));
-        border: 1px solid rgba(148,163,184,0.18);
-        border-radius: 12px;
-        padding: 13px 15px;
-        margin: 4px 0 14px 0;
+        background: linear-gradient(135deg, rgba(8,47,73,0.92), rgba(6,78,59,0.90));
+        border: 1px solid rgba(94,234,212,0.20);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin: 4px 0 16px 0;
         color: #f8fafc;
         display: grid;
-        grid-template-columns: 1.2fr repeat(3, minmax(130px, 0.55fr));
-        gap: 10px;
+        grid-template-columns: minmax(280px, 1fr) auto;
+        gap: 18px;
         align-items: center;
+        box-shadow: 0 18px 42px rgba(2, 6, 23, 0.24);
     }
     .topbar-title strong {
         display: block;
@@ -191,25 +192,32 @@ st.markdown(
         font-size: 0.86rem;
         margin-top: 4px;
     }
+    .topbar-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+    }
     .status-pill {
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.18);
-        border-radius: 8px;
-        padding: 8px 10px;
+        background: rgba(15,23,42,0.36);
+        border: 1px solid rgba(148,163,184,0.24);
+        border-radius: 999px;
+        padding: 7px 10px;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        white-space: nowrap;
     }
     .status-pill span {
-        display: block;
-        color: #bfdbfe;
-        font-size: 0.78rem;
-        margin-bottom: 4px;
+        color: #93c5fd;
+        font-size: 0.74rem;
+        margin-right: 5px;
     }
     .status-pill strong {
         color: #ffffff;
-        font-size: 0.95rem;
+        font-size: 0.86rem;
     }
     @media (max-width: 900px) {
         .topbar { grid-template-columns: 1fr; }
+        .topbar-chips { justify-content: flex-start; }
     }
     .decision-panel {
         background: linear-gradient(180deg, #ffffff, #f5f7fb);
@@ -777,9 +785,11 @@ def compact_header() -> None:
             <strong>CTRL-F FireWatch</strong>
             <span>Early fire detection using sensors, live weather, and wind direction.</span>
           </div>
-          <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
-          <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
-          <div class='status-pill'><span>Output</span><strong>Fire probability</strong></div>
+          <div class='topbar-chips'>
+            <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
+            <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
+            <div class='status-pill'><span>Output</span><strong>Fire probability</strong></div>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
