@@ -796,6 +796,23 @@ def fire_summary_panel(
     )
 
 
+def rule_check_tiles(weather: pd.DataFrame) -> None:
+    checks = [
+        ("Temperature", ">= 30 C", int((weather["temperature_c"] >= 30).sum())),
+        ("Humidity", "<= 30%", int((weather["humidity_pct"] <= 30).sum())),
+        ("Wind", ">= 30 km/h", int((weather["wind_kmh"] >= 30).sum())),
+        ("All together", "30-30-30", int(weather["fire_30_30_30"].sum())),
+    ]
+    cards = "".join(
+        "<div class='evidence-tile'>"
+        f"<span>{escape(label)} {escape(rule)}</span>"
+        f"<strong>{hours} hours</strong>"
+        "</div>"
+        for label, rule, hours in checks
+    )
+    st.markdown(f"<div class='evidence-grid'>{cards}</div>", unsafe_allow_html=True)
+
+
 def risk_legend() -> None:
     items = [
         ("Low", "#22c55e"),
@@ -943,15 +960,8 @@ with live_nrw_tab:
             )
         with right:
             st.markdown("#### 30-30-30 Checks")
-            rule_counts = pd.Series(
-                {
-                    "Temp >= 30 C": int((live_weather["temperature_c"] >= 30).sum()),
-                    "Humidity <= 30%": int((live_weather["humidity_pct"] <= 30).sum()),
-                    "Wind >= 30 km/h": int((live_weather["wind_kmh"] >= 30).sum()),
-                    "All 3 together": int(live_weather["fire_30_30_30"].sum()),
-                }
-            )
-            svg_bar_chart(rule_counts, height=360)
+            st.caption("A quick fire-weather rule: hot, dry, and windy at the same time.")
+            rule_check_tiles(live_weather)
 
         st.markdown("#### Wind Direction")
         st.caption("Wind direction matters for possible fire spread.")
