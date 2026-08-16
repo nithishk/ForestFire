@@ -221,6 +221,23 @@ st.markdown(
     .chip-high { background: #ffedd5; color: #9a3412; }
     .chip-watch { background: #fef9c3; color: #854d0e; }
     .chip-low { background: #dcfce7; color: #166534; }
+    .spread-box {
+        background: #eef6ff;
+        border: 1px solid #bfdbfe;
+        border-left: 5px solid #2563eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 8px 0 16px 0;
+        color: #10233f;
+    }
+    .spread-box h4 {
+        margin: 0 0 6px 0;
+        font-size: 1.02rem;
+    }
+    .spread-box p {
+        margin: 0;
+        color: #263746;
+    }
     .color-legend {
         display: flex;
         flex-wrap: wrap;
@@ -550,15 +567,28 @@ def sensor_network_view(latest: pd.DataFrame) -> None:
     ymin, ymax = latest["lat"].min(), latest["lat"].max()
     parts = [
         f"<svg viewBox='0 0 {width} {height}' width='100%' height='{height}' role='img'>",
+        "<defs><marker id='arrowhead' markerWidth='10' markerHeight='7' refX='9' refY='3.5' orient='auto'><polygon points='0 0, 10 3.5, 0 7' fill='#2563eb'/></marker></defs>",
         "<rect width='100%' height='100%' rx='8' fill='#f8fafc'/>",
         "<rect x='35' y='35' width='830' height='290' rx='8' fill='none' stroke='#94a3b8' stroke-dasharray='10 8'/>",
         "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Huertgenwald MVP sensor grid</text>",
     ]
+    top_sensor = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
     for row in latest.itertuples():
         x = pad + ((row.lon - xmin) / max(xmax - xmin, 1e-9)) * (width - pad * 2)
         y = pad + (1 - ((row.lat - ymin) / max(ymax - ymin, 1e-9))) * (height - pad * 2)
         radius = 10 + (row.fire_probability_pct / 100) * 18
         color = risk_color(row.prediction)
+        if row.sensor_id == top_sensor["sensor_id"] and row.fire_probability_pct > 0:
+            angle = np.deg2rad(row.spread_direction_deg)
+            arrow_length = 72
+            x2 = x + np.sin(angle) * arrow_length
+            y2 = y - np.cos(angle) * arrow_length
+            parts.append(
+                f"<line x1='{x:.1f}' y1='{y:.1f}' x2='{x2:.1f}' y2='{y2:.1f}' stroke='#2563eb' stroke-width='4' marker-end='url(#arrowhead)' opacity='0.9'/>"
+            )
+            parts.append(
+                f"<text x='{x2 + 8:.1f}' y='{y2:.1f}' fill='#1d4ed8' font-size='12' font-weight='700'>Spread toward {escape(row.spread_direction)}</text>"
+            )
         parts.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='{radius:.1f}' fill='{color}' opacity='0.82'/>")
         parts.append(f"<circle cx='{x:.1f}' cy='{y:.1f}' r='{radius + 5:.1f}' fill='none' stroke='{color}' opacity='0.25' stroke-width='4'/>")
         parts.append(
@@ -628,6 +658,18 @@ def decision_panel(sensor_id: str, zone: str, prediction: str, probability: floa
         f"<span class='chip'>Estimated time: {escape(format_signal_time(signal_time))}</span>"
         f"<span class='chip'>{escape(status)}</span>"
         "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def wind_spread_panel(row: pd.Series) -> None:
+    st.markdown(
+        "<div class='spread-box'>"
+        "<h4>Wind impact</h4>"
+        f"<p>Wind is coming from <strong>{escape(str(row['wind_direction']))}</strong> "
+        f"at <strong>{float(row['wind_kmh']):.1f} km/h</strong>. "
+        f"If ignition starts, likely spread is toward <strong>{escape(str(row['spread_direction']))}</strong>.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -864,15 +906,16 @@ with sensor_demo_tab:
         float(highest["fire_probability_pct"]),
         estimated_fire_time,
     )
+    wind_spread_panel(highest)
 
     metric_cards(
         [
             ("Sensor", f"{highest['sensor_id']}"),
             ("Zone", str(highest["zone"])),
             ("Estimated risk time", format_signal_time(estimated_fire_time)),
+            ("Wind", f"{highest['wind_kmh']:.1f} km/h"),
+            ("Spread toward", str(highest["spread_direction"])),
             ("Smoke", f"{highest['smoke_ppm']:.1f} ppm"),
-            ("CO", f"{highest['co_ppm']:.1f} ppm"),
-            ("Battery", f"{highest['battery_pct']:.0f}%"),
         ]
     )
 
@@ -880,13 +923,12 @@ with sensor_demo_tab:
         "The prediction rises when multiple signals move together: smoke, CO, heat, low humidity, wind, and IR."
     )
 
-    left, right = st.columns([2, 1])
-    with left:
-        st.markdown("#### Sensor Network")
-        st.caption("Risk level by sensor location.")
-        risk_legend()
-        sensor_network_view(latest)
-    with right:
+    st.markdown("#### Sensor Network")
+    st.caption("Risk level by sensor location.")
+    risk_legend()
+    sensor_network_view(latest)
+
+    with st.expander("Latest sensor readings"):
         st.markdown("#### Latest Readings")
         latest_table = latest.sort_values("fire_probability_pct", ascending=False)[
             [
@@ -897,6 +939,9 @@ with sensor_demo_tab:
                 "fire_probability_pct",
                 "temperature_c",
                 "humidity_pct",
+                "wind_kmh",
+                "wind_direction",
+                "spread_direction",
                 "smoke_ppm",
                 "co_ppm",
                 "battery_pct",
@@ -910,6 +955,9 @@ with sensor_demo_tab:
                 "fire_probability_pct": "Fire probability (%)",
                 "temperature_c": "Temp (C)",
                 "humidity_pct": "Humidity (%)",
+                "wind_kmh": "Wind (km/h)",
+                "wind_direction": "Wind from",
+                "spread_direction": "Spread toward",
                 "smoke_ppm": "Smoke (ppm)",
                 "co_ppm": "CO (ppm)",
                 "battery_pct": "Battery (%)",
@@ -919,21 +967,23 @@ with sensor_demo_tab:
         latest_table["Date"] = latest_table["Date"].map(format_signal_date)
         html_table(round_numeric(latest_table))
 
-    st.markdown("#### Hotspot Timeline")
-    if first_critical is None:
-        st.caption("The demo hotspot escalates as smoke, CO, and IR rise together.")
-    else:
-        st.caption(
-            f"Estimated fire-risk time: {format_signal_time(first_critical['time'])}. This is when the demo sensor first reaches critical risk."
+    with st.expander("Hotspot timeline"):
+        st.markdown("#### Hotspot Timeline")
+        if first_critical is None:
+            st.caption("The demo hotspot escalates as smoke, CO, and IR rise together.")
+        else:
+            st.caption(
+                f"Estimated fire-risk time: {format_signal_time(first_critical['time'])}. This is when the demo sensor first reaches critical risk."
+            )
+        hotspot_history = hotspot_rows.set_index("time")
+        svg_line_chart(
+            hotspot_history[["fire_probability_pct", "temperature_c", "humidity_pct", "smoke_ppm", "co_ppm"]],
+            height=320,
         )
-    hotspot_history = hotspot_rows.set_index("time")
-    svg_line_chart(
-        hotspot_history[["fire_probability_pct", "temperature_c", "humidity_pct", "smoke_ppm", "co_ppm"]],
-        height=360,
-    )
 
-    st.markdown("#### Prediction Signals")
-    signal_cards()
+    with st.expander("Prediction signals"):
+        st.markdown("#### Prediction Signals")
+        signal_cards()
 
 with historical_nrw_tab:
     st.subheader("Historical NRW: Hürtgenwald")

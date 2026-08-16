@@ -15,6 +15,12 @@ SENSOR_LOCATIONS = [
 ]
 
 
+def degrees_to_compass(degrees: float) -> str:
+    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    index = int((degrees + 22.5) // 45) % 8
+    return directions[index]
+
+
 def generate_sensor_demo(hours: int = 24, seed: int = 42) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     end = datetime.now().replace(minute=0, second=0, microsecond=0)
@@ -28,6 +34,7 @@ def generate_sensor_demo(hours: int = 24, seed: int = 42) -> pd.DataFrame:
             temperature = 22 + 8 * hour_wave + rng.normal(0, 0.7)
             humidity = 54 - 20 * hour_wave + rng.normal(0, 2.2)
             wind_kmh = 10 + 14 * hour_wave + rng.normal(0, 1.8)
+            wind_direction_deg = (235 + rng.normal(0, 18)) % 360
             smoke_ppm = 4 + rng.normal(0, 0.8)
             co_ppm = 1.2 + rng.normal(0, 0.25)
             flame_ir = 0.05 + rng.normal(0, 0.02)
@@ -51,6 +58,10 @@ def generate_sensor_demo(hours: int = 24, seed: int = 42) -> pd.DataFrame:
                     "temperature_c": max(0, temperature),
                     "humidity_pct": np.clip(humidity, 5, 100),
                     "wind_kmh": max(0, wind_kmh),
+                    "wind_direction_deg": wind_direction_deg,
+                    "wind_direction": degrees_to_compass(wind_direction_deg),
+                    "spread_direction_deg": (wind_direction_deg + 180) % 360,
+                    "spread_direction": degrees_to_compass((wind_direction_deg + 180) % 360),
                     "smoke_ppm": max(0, smoke_ppm),
                     "co_ppm": max(0, co_ppm),
                     "flame_ir": np.clip(flame_ir, 0, 1),
