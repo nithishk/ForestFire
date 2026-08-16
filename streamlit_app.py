@@ -101,22 +101,23 @@ st.markdown(
     }
     .risk-banner {
         border-radius: 10px;
-        padding: 18px 20px;
+        padding: 16px 18px;
         margin: 12px 0 18px 0;
-        border: 1px solid rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.16);
     }
     .risk-banner h3 {
         margin: 0 0 6px 0;
-        font-size: 1.35rem;
+        font-size: 1.2rem;
     }
     .risk-banner p {
         margin: 0;
         font-size: 0.95rem;
     }
-    .risk-critical { background: #7f1d1d; color: #fff7ed; }
-    .risk-high { background: #9a3412; color: #fff7ed; }
-    .risk-watch { background: #854d0e; color: #fffbeb; }
-    .risk-low { background: #14532d; color: #f0fdf4; }
+    .risk-critical { background: linear-gradient(135deg, #991b1b, #dc2626); color: #fff7ed; }
+    .risk-high { background: linear-gradient(135deg, #9a3412, #f97316); color: #fff7ed; }
+    .risk-watch { background: linear-gradient(135deg, #a16207, #eab308); color: #111827; }
+    .risk-low { background: linear-gradient(135deg, #166534, #22c55e); color: #f0fdf4; }
     .signal-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -183,21 +184,57 @@ st.markdown(
         font-size: 1.02rem;
     }
     .decision-panel {
-        background: #111827;
-        border: 1px solid #374151;
-        border-left: 5px solid #ef4444;
+        background: #f8fafc;
+        border: 1px solid #dbe3ea;
+        border-left: 5px solid #dc2626;
         border-radius: 10px;
         padding: 16px 18px;
         margin: 12px 0 18px 0;
-        color: #f9fafb;
+        color: #132333;
     }
     .decision-panel h4 {
-        margin: 0 0 8px 0;
+        margin: 0 0 10px 0;
         font-size: 1.05rem;
     }
     .decision-panel p {
         margin: 4px 0;
-        color: #d1d5db;
+        color: #334155;
+    }
+    .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        border: 1px solid rgba(15,23,42,0.12);
+        background: #ffffff;
+        color: #1e293b;
+    }
+    .chip-critical { background: #fee2e2; color: #991b1b; }
+    .chip-high { background: #ffedd5; color: #9a3412; }
+    .chip-watch { background: #fef9c3; color: #854d0e; }
+    .chip-low { background: #dcfce7; color: #166534; }
+    .color-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 6px 0 14px 0;
+        color: #cbd5e1;
+        font-size: 0.88rem;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        display: inline-block;
+        border-radius: 999px;
+        margin-right: 6px;
     }
     h1, h2, h3 { letter-spacing: 0; }
     </style>
@@ -469,20 +506,19 @@ def risk_color(prediction: str) -> str:
     return {
         "Critical": "#dc2626",
         "High": "#f97316",
-        "Watch": "#facc15",
+        "Watch": "#eab308",
         "Low": "#22c55e",
     }.get(prediction, "#22c55e")
 
 
 def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float) -> None:
     message = (
-        f"{sensor_id} at {zone} is showing the strongest fire signal. "
-        "This is a demo prediction from simulated sensor readings."
+        f"{sensor_id} · {zone} is the strongest current signal from the demo sensor network."
     )
     st.markdown(
         "<div class='risk-banner "
         f"{risk_class(prediction)}'>"
-        f"<h3>{escape(prediction)} risk · {probability:.0f}% probability</h3>"
+        f"<h3>{escape(prediction)} · {probability:.0f}% fire probability</h3>"
         f"<p>{escape(message)}</p>"
         "</div>",
         unsafe_allow_html=True,
@@ -559,15 +595,38 @@ def hero_section() -> None:
 def decision_panel(sensor_id: str, zone: str, prediction: str, probability: float) -> None:
     status = "Fire-risk signal detected" if prediction in {"Critical", "High"} else "No strong fire-risk signal"
     priority = "Critical" if prediction == "Critical" else ("High" if prediction == "High" else "Normal")
+    chip_class = {
+        "Critical": "chip-critical",
+        "High": "chip-high",
+        "Watch": "chip-watch",
+        "Low": "chip-low",
+    }.get(prediction, "chip-low")
     st.markdown(
         "<div class='decision-panel'>"
-        "<h4>Prediction output</h4>"
-        f"<p><strong>Status:</strong> {escape(status)}</p>"
-        f"<p><strong>Risk level:</strong> {escape(priority)}</p>"
-        f"<p><strong>Evidence:</strong> {escape(sensor_id)} at {escape(zone)} is at {probability:.0f}% predicted fire probability.</p>"
+        "<h4>Risk assessment</h4>"
+        f"<p>{escape(sensor_id)} at {escape(zone)} is the lead signal. Prediction is based on simulated sensor data.</p>"
+        "<div class='chip-row'>"
+        f"<span class='chip {chip_class}'>{escape(priority)} risk</span>"
+        f"<span class='chip'>{probability:.0f}% probability</span>"
+        f"<span class='chip'>{escape(status)}</span>"
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
+
+
+def risk_legend() -> None:
+    items = [
+        ("Low", "#22c55e"),
+        ("Watch", "#eab308"),
+        ("High", "#f97316"),
+        ("Critical", "#dc2626"),
+    ]
+    html = "".join(
+        f"<span><span class='legend-dot' style='background:{color}'></span>{label}</span>"
+        for label, color in items
+    )
+    st.markdown(f"<div class='color-legend'>{html}</div>", unsafe_allow_html=True)
 
 
 def round_numeric(frame: pd.DataFrame, decimals: int = 2) -> pd.DataFrame:
@@ -800,6 +859,7 @@ with sensor_demo_tab:
     with left:
         st.markdown("#### Sensor Network")
         st.caption("Risk level by sensor location.")
+        risk_legend()
         sensor_network_view(latest)
     with right:
         st.markdown("#### Latest Readings")
