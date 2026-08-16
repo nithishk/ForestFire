@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from live_pipeline import effis_map_url, fetch_hurtgenwald_weather, risk_label
+
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "outputs" / "weather_analysis"
@@ -157,6 +159,11 @@ def add_fire_weather_columns(frame: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 
+@st.cache_data(ttl=1800)
+def load_hurtgenwald_weather() -> pd.DataFrame:
+    return fetch_hurtgenwald_weather()
+
+
 def metric_cards(items: list[tuple[str, str]]) -> None:
     cols = st.columns(len(items))
     for col, (label, value) in zip(cols, items):
@@ -210,8 +217,8 @@ data = load_data()
 
 st.title("Weather Dashboard")
 
-overview_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
-    ["Overview", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
+overview_tab, live_nrw_tab, paris_tab, germany_tab, wildfire_tab, patterns_tab, simulation_tab = st.tabs(
+    ["Overview", "Live NRW", "Paris", "Germany", "Wildfire", "Patterns", "Simulation"]
 )
 
 with overview_tab:
@@ -249,6 +256,99 @@ with overview_tab:
         )
 
     note("Paris has 10 complete days, but 2026-07-19 is missing from the source data.")
+
+with live_nrw_tab:
+    st.subheader("Live NRW: Hürtgenwald")
+    st.write("Current forecast conditions and Copernicus EFFIS fire-weather layer.")
+    st.caption("Weather feed: Open-Meteo forecast. Fire danger map: Copernicus EFFIS WMS.")
+
+    try:
+        live_weather = load_hurtgenwald_weather()
+        now_local = pd.Timestamp.now(tz="Europe/Berlin").tz_localize(None)
+        future_weather = live_weather[live_weather["time"] >= now_local]
+        latest = future_weather.iloc[0] if not future_weather.empty else live_weather.iloc[-1]
+        worst = live_weather.sort_values(["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False).iloc[0]
+        latest_risk = risk_label(int(latest["fire_weather_score"]), bool(latest["fire_30_30_30"]))
+        worst_risk = risk_label(int(worst["fire_weather_score"]), bool(worst["fire_30_30_30"]))
+
+        metric_cards(
+            [
+                ("Now", latest_risk),
+                ("Temp", f"{latest['temperature_c']:.1f} C"),
+                ("Humidity", f"{latest['humidity_pct']:.0f}%"),
+                ("Wind", f"{latest['wind_kmh']:.1f} km/h"),
+                ("Direction", f"{latest['wind_direction']} ({latest['wind_direction_deg']:.0f} deg)"),
+            ]
+        )
+
+        insight(
+            f"Highest forecast risk in the next 3 days: {worst_risk} on {worst['time']:%d %b, %H:%M}."
+        )
+
+        left, right = st.columns([2, 1])
+        with left:
+            st.markdown("#### Forecast Inputs")
+            st.caption("Temperature, humidity, wind, and rain for Hürtgenwald.")
+            st.line_chart(
+                live_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
+                height=360,
+            )
+        with right:
+            st.markdown("#### 30-30-30 Checks")
+            rule_counts = pd.Series(
+                {
+                    "Temp >= 30 C": int((live_weather["temperature_c"] >= 30).sum()),
+                    "Humidity <= 30%": int((live_weather["humidity_pct"] <= 30).sum()),
+                    "Wind >= 30 km/h": int((live_weather["wind_kmh"] >= 30).sum()),
+                    "All 3 together": int(live_weather["fire_30_30_30"].sum()),
+                }
+            )
+            st.bar_chart(rule_counts, height=360)
+
+        st.markdown("#### Wind Direction")
+        st.caption("Wind direction matters for possible fire spread.")
+        st.bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
+
+        st.markdown("#### Copernicus EFFIS Fire Weather Index")
+        st.caption("EFFIS WMS layer for the Hürtgenwald/NRW area.")
+        st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+
+        with st.expander("Show live forecast table"):
+            table = live_weather.copy()
+            table["risk"] = [
+                risk_label(int(row.fire_weather_score), bool(row.fire_30_30_30))
+                for row in table.itertuples()
+            ]
+            st.dataframe(
+                table.rename(
+                    columns={
+                        "time": "Time",
+                        "temperature_c": "Temp (C)",
+                        "humidity_pct": "Humidity (%)",
+                        "rain_mm": "Rain (mm)",
+                        "wind_kmh": "Wind (km/h)",
+                        "wind_direction": "Direction",
+                        "risk": "Risk",
+                    }
+                )[
+                    [
+                        "Time",
+                        "Risk",
+                        "Temp (C)",
+                        "Humidity (%)",
+                        "Rain (mm)",
+                        "Wind (km/h)",
+                        "Direction",
+                    ]
+                ].round(2),
+                use_container_width=True,
+                hide_index=True,
+            )
+    except Exception as exc:
+        st.error("Live data is temporarily unavailable.")
+        st.caption(str(exc))
+        st.markdown("#### Copernicus EFFIS Fire Weather Index")
+        st.image(effis_map_url("mf010.fwi"), use_container_width=True)
 
 with paris_tab:
     st.subheader("Paris Weather")
