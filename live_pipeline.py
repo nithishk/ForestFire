@@ -307,9 +307,17 @@ def fetch_hurtgenwald_history(start_date: date, end_date: date) -> tuple[pd.Data
     return fetch_hurtgenwald_archive_weather(start_date, archive_end), "historical archive API"
 
 
-def effis_map_url(layer: str = "mf010.fwi", map_date: date | None = None) -> str:
-    """Build a Copernicus EFFIS WMS map URL for the Huertgenwald/NRW area."""
+def effis_map_url(
+    layer: str = "mf010.fwi",
+    map_date: date | None = None,
+    latitude: float = HURTGENWALD_LAT,
+    longitude: float = HURTGENWALD_LON,
+    span: float = 0.9,
+) -> str:
+    """Build a Copernicus EFFIS WMS map URL centered on an operational area."""
     selected_date = map_date or date.today()
+    half_span = span / 2
+    bbox = f"{longitude - half_span:.3f},{latitude - half_span:.3f},{longitude + half_span:.3f},{latitude + half_span:.3f}"
     params = {
         "SERVICE": "WMS",
         "VERSION": "1.1.1",
@@ -317,7 +325,7 @@ def effis_map_url(layer: str = "mf010.fwi", map_date: date | None = None) -> str
         "LAYERS": layer,
         "STYLES": "",
         "SRS": "EPSG:4326",
-        "BBOX": "5.95,50.35,6.85,51.05",
+        "BBOX": bbox,
         "WIDTH": "900",
         "HEIGHT": "600",
         "FORMAT": "image/png",

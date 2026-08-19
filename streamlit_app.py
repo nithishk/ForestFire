@@ -8,7 +8,15 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from live_pipeline import effis_map_url, fetch_global_fire_weather, fetch_hurtgenwald_history, fetch_hurtgenwald_weather, risk_label
+from live_pipeline import (
+    GLOBAL_FIRE_LOCATIONS,
+    effis_map_url,
+    fetch_global_fire_weather,
+    fetch_hurtgenwald_history,
+    fetch_hurtgenwald_weather,
+    fetch_location_weather,
+    risk_label,
+)
 from sensor_simulation import generate_sensor_demo
 
 
@@ -744,6 +752,19 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
     return fetch_hurtgenwald_weather()
 
 
+def germany_live_locations() -> list[dict]:
+    return [location for location in GLOBAL_FIRE_LOCATIONS if location["country"] == "Germany"]
+
+
+@st.cache_data(ttl=1800)
+def load_selected_location_weather(area: str, site: str) -> pd.DataFrame:
+    location = next(
+        item for item in GLOBAL_FIRE_LOCATIONS
+        if item["country"] == "Germany" and item["area"] == area and item["site"] == site
+    )
+    return fetch_location_weather(location)
+
+
 @st.cache_data(ttl=1800)
 def load_global_fire_weather() -> pd.DataFrame:
     _ = GLOBAL_MONITOR_CACHE_VERSION
@@ -1342,8 +1363,8 @@ data = load_data()
 
 compact_header()
 
-overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
-    ["Overview", "Fire Prediction", "Live Weather", "Regional Monitor", "Historical Risk", "Weather Analysis", "Patterns"]
+overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab = st.tabs(
+    ["Overview", "Fire Prediction", "Live Weather", "Regional Monitor", "Historical Risk", "Weather Analysis"]
 )
 
 with overview_tab:
@@ -1384,12 +1405,23 @@ with overview_tab:
 
 with live_nrw_tab:
     st.subheader("Live Weather Alert")
-    st.write("Current forecast conditions and Copernicus EFFIS fire-weather layer for the selected operational area.")
+    st.write("Current forecast conditions and Copernicus EFFIS fire-weather layer for selected Germany regions.")
     st.caption("Weather feed: Open-Meteo forecast. Fire danger map: Copernicus EFFIS WMS.")
 
     try:
-        live_weather = load_hurtgenwald_weather()
-        now_local = pd.Timestamp.now(tz="Europe/Berlin").tz_localize(None)
+        germany_locations = germany_live_locations()
+        location_labels = {
+            f"{location['area']} · {location['site']}": location
+            for location in germany_locations
+        }
+        selected_location_label = st.selectbox(
+            "Germany region",
+            list(location_labels.keys()),
+            key="live_germany_region",
+        )
+        selected_location = location_labels[selected_location_label]
+        live_weather = load_selected_location_weather(selected_location["area"], selected_location["site"])
+        now_local = pd.Timestamp.now(tz=selected_location["timezone"]).tz_localize(None)
         future_weather = live_weather[live_weather["time"] >= now_local]
         latest = future_weather.iloc[0] if not future_weather.empty else live_weather.iloc[-1]
         worst = live_weather.sort_values(["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False).iloc[0]
@@ -1398,6 +1430,8 @@ with live_nrw_tab:
 
         metric_cards(
             [
+                ("Region", selected_location["area"]),
+                ("Site", selected_location["site"]),
                 ("Now", latest_risk),
                 ("Temp", f"{latest['temperature_c']:.1f} C"),
                 ("Humidity", f"{latest['humidity_pct']:.0f}%"),
@@ -1405,7 +1439,7 @@ with live_nrw_tab:
                 ("Direction", f"{latest['wind_direction']} ({latest['wind_direction_deg']:.0f} deg)"),
             ]
         )
-        temperature_alert(float(latest["temperature_c"]), "Selected-area weather")
+        temperature_alert(float(latest["temperature_c"]), f"{selected_location['area']} weather")
 
         insight(
             f"Highest forecast risk in the next 3 days: {worst_risk} on {worst['time']:%d %b, %H:%M}."
@@ -1414,7 +1448,7 @@ with live_nrw_tab:
         left, right = st.columns([2, 1])
         with left:
             st.markdown("#### Forecast Inputs")
-            st.caption("Temperature, humidity, wind, and rain for the selected operational area.")
+            st.caption(f"Temperature, humidity, wind, and rain for {selected_location['site']}.")
             svg_line_chart(
                 live_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
                 height=360,
@@ -1429,8 +1463,15 @@ with live_nrw_tab:
         svg_bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
 
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
-        st.caption("EFFIS WMS layer for the selected operational area.")
-        st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+        st.caption(f"EFFIS WMS layer centered on {selected_location['site']}.")
+        st.image(
+            effis_map_url(
+                "mf010.fwi",
+                latitude=float(selected_location["latitude"]),
+                longitude=float(selected_location["longitude"]),
+            ),
+            use_container_width=True,
+        )
 
         with st.expander("Show live forecast table"):
             table = live_weather.copy()
@@ -1951,60 +1992,3 @@ with weather_tab:
                 use_container_width=True,
                 hide_index=True,
             )
-
-with patterns_tab:
-    st.subheader("Pattern Finder")
-    st.write("Key dates, months, and daily cycles.")
-
-    paris_daily = daily_weather_labels(data["paris_daily"])
-    germany_daily = data["germany_daily"]
-    germany_monthly = data["germany_monthly"]
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### Paris standouts")
-        hottest = paris_daily.loc[paris_daily["temp_c_max"].idxmax()]
-        wettest = paris_daily.loc[paris_daily["precipitation_mm_total"].idxmax()]
-        windiest = paris_daily.loc[paris_daily["wind10_mps_mean"].idxmax()]
-        st.write(f"Hottest day: **{hottest['date'].date()}**, {hottest['temp_c_max']:.1f} C")
-        st.write(f"Wettest day: **{wettest['date'].date()}**, {wettest['precipitation_mm_total']:.1f} mm")
-        st.write(f"Windiest day: **{windiest['date'].date()}**, {windiest['wind10_mps_mean']:.1f} m/s")
-        html_table(friendly_daily_table(paris_daily), use_container_width=True, hide_index=True)
-
-    with col2:
-        st.markdown("#### Germany standouts")
-        windiest_month = germany_monthly.loc[germany_monthly["wind10_mps_mean"].idxmax()]
-        calmest_month = germany_monthly.loc[germany_monthly["wind10_mps_mean"].idxmin()]
-        windiest_day = germany_daily.loc[germany_daily["wind10_mps_mean"].idxmax()]
-        st.write(f"Windiest month: **{windiest_month['month']}**, {windiest_month['wind10_mps_mean']:.1f} m/s")
-        st.write(f"Calmest month: **{calmest_month['month']}**, {calmest_month['wind10_mps_mean']:.1f} m/s")
-        st.write(f"Windiest day: **{windiest_day['date'].date()}**, {windiest_day['wind10_mps_mean']:.1f} m/s")
-        html_table(
-            germany_monthly.rename(
-                columns={
-                    "month": "Month",
-                    "wind10_mps_mean": "Average wind (m/s)",
-                    "wind10_mps_min": "Lowest wind (m/s)",
-                    "wind10_mps_max": "Highest wind (m/s)",
-                    "wind10_mps_p90": "High-wind level (m/s)",
-                }
-            ).pipe(round_numeric),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-    insight(
-        "Paris patterns center on heat and rain. Germany patterns center on season and location."
-    )
-
-    st.markdown("#### Average Daily Cycles")
-    st.caption("Paris temperature and Germany wind by hour.")
-    p_cycle = data["paris"].groupby("hour", as_index=False)["t2m_c"].mean().rename(columns={"t2m_c": "Paris temp C"})
-    g_cycle = (
-        data["germany"]
-        .groupby("hour", as_index=False)["wind10_mps_mean"]
-        .mean()
-        .rename(columns={"wind10_mps_mean": "Germany wind m/s"})
-    )
-    cycles = p_cycle.merge(g_cycle, on="hour")
-    svg_line_chart(cycles.set_index("hour"), height=320)
