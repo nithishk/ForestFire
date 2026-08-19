@@ -14,6 +14,7 @@ from sensor_simulation import generate_sensor_demo
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "outputs" / "weather_analysis"
+GLOBAL_MONITOR_CACHE_VERSION = "global-areas-v2"
 
 
 st.set_page_config(page_title="Weather Pattern Dashboard", layout="wide")
@@ -745,6 +746,7 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
 
 @st.cache_data(ttl=1800)
 def load_global_fire_weather() -> pd.DataFrame:
+    _ = GLOBAL_MONITOR_CACHE_VERSION
     return prepare_global_weather(fetch_global_fire_weather())
 
 
