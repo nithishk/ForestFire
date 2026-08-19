@@ -67,6 +67,41 @@ st.markdown(
         margin: 8px 0 14px 0;
     }
     .note-box strong { color: #3a2609; }
+    .temp-alert {
+        background: linear-gradient(135deg, #991b1b, #ef4444);
+        border: 1px solid rgba(254,202,202,0.45);
+        border-radius: 12px;
+        color: #fff7ed;
+        padding: 14px 16px;
+        margin: 10px 0 16px 0;
+        box-shadow: 0 16px 34px rgba(127, 29, 29, 0.28);
+    }
+    .temp-alert h4 {
+        margin: 0 0 6px 0;
+        font-size: 1.08rem;
+    }
+    .temp-alert p {
+        margin: 0;
+        color: #ffedd5;
+        font-size: 0.94rem;
+    }
+    .temp-ok {
+        background: linear-gradient(135deg, #064e3b, #15803d);
+        border: 1px solid rgba(187,247,208,0.34);
+        border-radius: 12px;
+        color: #f0fdf4;
+        padding: 12px 14px;
+        margin: 10px 0 16px 0;
+    }
+    .temp-ok h4 {
+        margin: 0 0 4px 0;
+        font-size: 1rem;
+    }
+    .temp-ok p {
+        margin: 0;
+        color: #dcfce7;
+        font-size: 0.9rem;
+    }
     .metric-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -931,6 +966,26 @@ def note(text: str) -> None:
     st.markdown(f"<div class='note-box'><strong>Note:</strong> {text}</div>", unsafe_allow_html=True)
 
 
+def temperature_alert(temp_c: float, source: str, threshold: float = 22.0) -> None:
+    if temp_c > threshold:
+        st.markdown(
+            "<div class='temp-alert'>"
+            "<h4>Temperature alert</h4>"
+            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, above the demo threshold of "
+            f"<strong>{threshold:.0f} C</strong>. Heat stress is increasing.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            "<div class='temp-ok'>"
+            "<h4>Temperature normal</h4>"
+            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, below the demo alert threshold.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+
 def friendly_daily_table(frame: pd.DataFrame) -> pd.DataFrame:
     return (
         frame.rename(
@@ -1033,6 +1088,7 @@ with live_nrw_tab:
                 ("Direction", f"{latest['wind_direction']} ({latest['wind_direction_deg']:.0f} deg)"),
             ]
         )
+        temperature_alert(float(latest["temperature_c"]), "Live NRW weather")
 
         insight(
             f"Highest forecast risk in the next 3 days: {worst_risk} on {worst['time']:%d %b, %H:%M}."
@@ -1121,6 +1177,7 @@ with sensor_demo_tab:
         highest_spread_direction,
         highest_wind_kmh,
     )
+    temperature_alert(float(highest["temperature_c"]), f"{highest['sensor_id']} sensor")
 
     insight(
         "Why this matters: the sensor flags the hotspot, and wind direction shows where spread may move next."
