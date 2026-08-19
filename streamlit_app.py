@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from live_pipeline import (
     GLOBAL_FIRE_LOCATIONS,
@@ -1077,6 +1078,146 @@ def global_area_board(latest: pd.DataFrame, limit: int | None = None) -> None:
     st.markdown(f"<div class='area-board'>{''.join(tiles)}</div>", unsafe_allow_html=True)
 
 
+def effis_interactive_map(site: str, area: str, latitude: float, longitude: float) -> None:
+    layer_url = effis_map_url("mf010.fwi", latitude=latitude, longitude=longitude)
+    html = f"""
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>
+        body {{
+          margin: 0;
+          font-family: Inter, Segoe UI, Arial, sans-serif;
+          background: #0b1118;
+          color: #0f172a;
+        }}
+        .map-shell {{
+          border: 1px solid #d7e1ea;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #ffffff;
+          box-shadow: 0 18px 36px rgba(2,6,23,0.20);
+        }}
+        .map-head {{
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          align-items: center;
+          padding: 14px 16px;
+          background: linear-gradient(135deg, #f8fafc, #eaf3ee);
+          border-bottom: 1px solid #dbe3ea;
+        }}
+        .map-head strong {{
+          display: block;
+          font-size: 16px;
+          margin-bottom: 3px;
+        }}
+        .map-head span {{
+          color: #526678;
+          font-size: 13px;
+        }}
+        .map-head a {{
+          color: #0f766e;
+          border: 1px solid #99f6e4;
+          background: #ecfdf5;
+          border-radius: 999px;
+          padding: 7px 10px;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 12px;
+          white-space: nowrap;
+        }}
+        #map {{
+          height: 430px;
+          width: 100%;
+        }}
+        .legend {{
+          position: absolute;
+          z-index: 500;
+          bottom: 18px;
+          right: 14px;
+          background: rgba(255,255,255,0.94);
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          padding: 10px 12px;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+          font-size: 12px;
+          line-height: 1.35;
+        }}
+        .legend strong {{
+          display: block;
+          margin-bottom: 6px;
+          font-size: 12px;
+        }}
+        .legend-row {{
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin: 4px 0;
+          color: #334155;
+        }}
+        .swatch {{
+          width: 14px;
+          height: 10px;
+          border-radius: 3px;
+          display: inline-block;
+        }}
+      </style>
+    </head>
+    <body>
+      <div class="map-shell">
+        <div class="map-head">
+          <div>
+            <strong>{escape(site)}</strong>
+            <span>{escape(area)} - street map with Copernicus EFFIS Fire Weather Index overlay</span>
+          </div>
+          <a href="{escape(layer_url)}" target="_blank" rel="noopener noreferrer">Open layer</a>
+        </div>
+        <div id="map"></div>
+      </div>
+      <script>
+        const map = L.map('map', {{ zoomControl: true }}).setView([{latitude:.5f}, {longitude:.5f}], 9);
+        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+          maxZoom: 18,
+          attribution: '&copy; OpenStreetMap contributors'
+        }}).addTo(map);
+
+        L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {{
+          layers: 'mf010.fwi',
+          format: 'image/png',
+          transparent: true,
+          opacity: 0.58,
+          version: '1.1.1'
+        }}).addTo(map);
+
+        L.marker([{latitude:.5f}, {longitude:.5f}]).addTo(map)
+          .bindPopup('{escape(site)}<br>{escape(area)}')
+          .openPopup();
+
+        const legend = L.control({{ position: 'bottomright' }});
+        legend.onAdd = function() {{
+          const div = L.DomUtil.create('div', 'legend');
+          div.innerHTML = `
+            <strong>FWI intensity</strong>
+            <div class="legend-row"><span class="swatch" style="background:#9af7c2"></span>Low</div>
+            <div class="legend-row"><span class="swatch" style="background:#d6ea42"></span>Moderate</div>
+            <div class="legend-row"><span class="swatch" style="background:#f59e0b"></span>High</div>
+            <div class="legend-row"><span class="swatch" style="background:#dc2626"></span>Very high</div>
+          `;
+          return div;
+        }};
+        legend.addTo(map);
+      </script>
+    </body>
+    </html>
+    """
+    components.html(html, height=520, scrolling=False)
+
+
 def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float, signal_time: object) -> None:
     signal_label = format_signal_time(signal_time)
     message = (
@@ -1489,14 +1630,12 @@ with live_nrw_tab:
         svg_bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
 
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
-        st.caption(f"EFFIS WMS layer centered on {selected_location['site']}.")
-        st.image(
-            effis_map_url(
-                "mf010.fwi",
-                latitude=float(selected_location["latitude"]),
-                longitude=float(selected_location["longitude"]),
-            ),
-            use_container_width=True,
+        st.caption("Street map context with the Copernicus EFFIS Fire Weather Index overlay.")
+        effis_interactive_map(
+            selected_location["site"],
+            selected_location["area"],
+            float(selected_location["latitude"]),
+            float(selected_location["longitude"]),
         )
 
         with st.expander("Show live forecast table"):
@@ -1534,7 +1673,7 @@ with live_nrw_tab:
         st.error("Live data is temporarily unavailable.")
         st.caption(str(exc))
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
-        st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+        effis_interactive_map("Huertgenwald, NRW", "North Rhine-Westphalia", 50.716, 6.375)
 
 with global_tab:
     st.subheader("Regional Fire-Weather Monitor")
