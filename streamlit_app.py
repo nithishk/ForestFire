@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from live_pipeline import effis_map_url, fetch_hurtgenwald_history, fetch_hurtgenwald_weather, risk_label
+from live_pipeline import effis_map_url, fetch_global_fire_weather, fetch_hurtgenwald_history, fetch_hurtgenwald_weather, risk_label
 from sensor_simulation import generate_sensor_demo
 
 
@@ -101,6 +102,60 @@ st.markdown(
         margin: 0;
         color: #dcfce7;
         font-size: 0.9rem;
+    }
+    .country-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin: 12px 0 18px 0;
+    }
+    .country-card {
+        background: linear-gradient(180deg, #ffffff, #f5f8fb);
+        border: 1px solid #dbe3ea;
+        border-top: 5px solid #22c55e;
+        border-radius: 12px;
+        color: #10212f;
+        padding: 15px;
+        box-shadow: 0 12px 26px rgba(2, 6, 23, 0.12);
+    }
+    .country-card.high { border-top-color: #f97316; }
+    .country-card.critical { border-top-color: #dc2626; }
+    .country-card.elevated { border-top-color: #eab308; }
+    .country-card h4 {
+        margin: 0 0 4px 0;
+        font-size: 1.05rem;
+    }
+    .country-card .site {
+        color: #475569;
+        font-size: 0.86rem;
+        margin-bottom: 10px;
+    }
+    .country-card .risk {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 5px 9px;
+        margin-bottom: 10px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        background: #dcfce7;
+        color: #166534;
+    }
+    .country-card.high .risk { background: #ffedd5; color: #9a3412; }
+    .country-card.critical .risk { background: #fee2e2; color: #991b1b; }
+    .country-card.elevated .risk { background: #fef9c3; color: #854d0e; }
+    .country-card dl {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0;
+    }
+    .country-card dt {
+        color: #64748b;
+        font-size: 0.76rem;
+    }
+    .country-card dd {
+        margin: 2px 0 0 0;
+        font-weight: 800;
     }
     .metric-grid {
         display: grid;
@@ -536,6 +591,11 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
     return fetch_hurtgenwald_weather()
 
 
+@st.cache_data(ttl=1800)
+def load_global_fire_weather() -> pd.DataFrame:
+    return fetch_global_fire_weather()
+
+
 @st.cache_data(ttl=3600)
 def load_hurtgenwald_history(start_date, end_date):
     return fetch_hurtgenwald_history(start_date, end_date)
@@ -711,6 +771,55 @@ def risk_color(prediction: str) -> str:
         "Watch": "#eab308",
         "Low": "#22c55e",
     }.get(prediction, "#22c55e")
+
+
+def country_card_class(risk: str) -> str:
+    return {
+        "Critical": "critical",
+        "High": "high",
+        "Elevated": "elevated",
+        "Low": "low",
+    }.get(risk, "low")
+
+
+def latest_by_country(global_weather: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for (_, site), frame in global_weather.groupby(["country", "site"]):
+        timezone = str(frame["timezone"].iat[0]) if "timezone" in frame.columns else "UTC"
+        now = pd.Timestamp.now(tz=ZoneInfo(timezone)).tz_localize(None)
+        future = frame[frame["time"] >= now]
+        latest = future.iloc[0] if not future.empty else frame.iloc[-1]
+        worst = frame.sort_values(["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False).iloc[0]
+        row = latest.copy()
+        row["risk"] = risk_label(int(latest["fire_weather_score"]), bool(latest["fire_30_30_30"]))
+        row["worst_risk"] = risk_label(int(worst["fire_weather_score"]), bool(worst["fire_30_30_30"]))
+        row["worst_time"] = worst["time"]
+        row["spread_direction"] = degrees_to_compass((float(latest["wind_direction_deg"]) + 180) % 360)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def global_country_cards(latest: pd.DataFrame) -> None:
+    cards = []
+    for row in latest.sort_values(["fire_weather_score", "temperature_c"], ascending=False).itertuples():
+        risk = str(row.risk)
+        temp_note = "Temp alert" if row.temperature_c > 22 else "Temp normal"
+        cards.append(
+            f"<div class='country-card {country_card_class(risk)}'>"
+            f"<h4>{escape(row.country)}</h4>"
+            f"<div class='site'>{escape(row.site)}</div>"
+            f"<div class='risk'>{escape(risk)} risk</div>"
+            "<dl>"
+            f"<div><dt>Temp</dt><dd>{row.temperature_c:.1f} C</dd></div>"
+            f"<div><dt>Humidity</dt><dd>{row.humidity_pct:.0f}%</dd></div>"
+            f"<div><dt>Wind</dt><dd>{row.wind_kmh:.1f} km/h</dd></div>"
+            f"<div><dt>Spread</dt><dd>{escape(row.wind_direction)} -> {escape(row.spread_direction)}</dd></div>"
+            f"<div><dt>Alert</dt><dd>{escape(temp_note)}</dd></div>"
+            f"<div><dt>Worst window</dt><dd>{escape(row.worst_risk)}</dd></div>"
+            "</dl>"
+            "</div>"
+        )
+    st.markdown(f"<div class='country-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
 
 def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float, signal_time: object) -> None:
@@ -1025,8 +1134,8 @@ data = load_data()
 
 compact_header()
 
-overview_tab, sensor_demo_tab, live_nrw_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
-    ["Overview", "Fire Prediction", "Live NRW", "Historical NRW", "Weather Analysis", "Patterns"]
+overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
+    ["Overview", "Fire Prediction", "Live NRW", "Global Monitor", "Historical NRW", "Weather Analysis", "Patterns"]
 )
 
 with overview_tab:
@@ -1151,6 +1260,77 @@ with live_nrw_tab:
         st.caption(str(exc))
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
+
+with global_tab:
+    st.subheader("Global Fire-Weather Monitor")
+    st.write("Demo live forecast comparison for Germany, USA, and Canada.")
+    note("This is a demo monitor using representative wildfire-risk locations. Full country-wide grids should be handled by a scheduled data pipeline.")
+
+    try:
+        global_weather = load_global_fire_weather()
+        latest_global = latest_by_country(global_weather)
+        high_count = int(latest_global["risk"].isin(["High", "Critical"]).sum())
+        temp_alerts = int((latest_global["temperature_c"] > 22).sum())
+        windiest = latest_global.sort_values("wind_kmh", ascending=False).iloc[0]
+
+        metric_cards(
+            [
+                ("Countries", f"{latest_global['country'].nunique()}"),
+                ("High/Critical now", f"{high_count}"),
+                ("Temp alerts > 22 C", f"{temp_alerts}"),
+                ("Windiest site", f"{windiest['country']} {windiest['wind_kmh']:.1f} km/h"),
+            ]
+        )
+        global_country_cards(latest_global)
+        insight("This gives a board-level view: where heat, wind, humidity, and likely spread direction need attention first.")
+
+        selected_country = st.selectbox(
+            "Country detail",
+            latest_global["country"].tolist(),
+            key="global_country_detail",
+        )
+        selected_site = latest_global.loc[latest_global["country"] == selected_country, "site"].iat[0]
+        country_weather = global_weather[
+            (global_weather["country"] == selected_country) & (global_weather["site"] == selected_site)
+        ]
+        st.markdown(f"#### {selected_country}: {selected_site}")
+        svg_line_chart(
+            country_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
+            height=320,
+        )
+
+        with st.expander("Global comparison table"):
+            comparison = latest_global[
+                [
+                    "country",
+                    "site",
+                    "risk",
+                    "temperature_c",
+                    "humidity_pct",
+                    "wind_kmh",
+                    "wind_direction",
+                    "spread_direction",
+                    "worst_risk",
+                    "worst_time",
+                ]
+            ].rename(
+                columns={
+                    "country": "Country",
+                    "site": "Site",
+                    "risk": "Risk now",
+                    "temperature_c": "Temp (C)",
+                    "humidity_pct": "Humidity (%)",
+                    "wind_kmh": "Wind (km/h)",
+                    "wind_direction": "Wind from",
+                    "spread_direction": "Spread toward",
+                    "worst_risk": "Worst 3-day risk",
+                    "worst_time": "Worst time",
+                }
+            )
+            html_table(round_numeric(comparison), use_container_width=True, hide_index=True)
+    except Exception as exc:
+        st.error("Global monitor data is temporarily unavailable.")
+        st.caption(str(exc))
 
 with sensor_demo_tab:
     st.subheader("Fire Prediction Demo")

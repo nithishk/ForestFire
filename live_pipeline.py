@@ -10,6 +10,29 @@ import requests
 HURTGENWALD_LAT = 50.716
 HURTGENWALD_LON = 6.375
 EFFIS_WMS_URL = "https://maps.effis.emergency.copernicus.eu/effis"
+GLOBAL_FIRE_LOCATIONS = [
+    {
+        "country": "Germany",
+        "site": "Huertgenwald, NRW",
+        "latitude": 50.716,
+        "longitude": 6.375,
+        "timezone": "Europe/Berlin",
+    },
+    {
+        "country": "USA",
+        "site": "Los Angeles foothills, CA",
+        "latitude": 34.199,
+        "longitude": -118.176,
+        "timezone": "America/Los_Angeles",
+    },
+    {
+        "country": "Canada",
+        "site": "Fort McMurray, Alberta",
+        "latitude": 56.726,
+        "longitude": -111.380,
+        "timezone": "America/Edmonton",
+    },
+]
 WEATHER_VARIABLES = [
     "temperature_2m",
     "relative_humidity_2m",
@@ -69,6 +92,33 @@ def fetch_hurtgenwald_weather() -> pd.DataFrame:
     response = requests.get(url, params=params, timeout=20)
     response.raise_for_status()
     return weather_frame(response.json())
+
+
+def fetch_location_weather(location: dict, forecast_days: int = 3) -> pd.DataFrame:
+    """Fetch a live forecast for one demo wildfire-monitoring location."""
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": location["latitude"],
+        "longitude": location["longitude"],
+        "hourly": ",".join(WEATHER_VARIABLES),
+        "forecast_days": forecast_days,
+        "timezone": location["timezone"],
+    }
+    response = requests.get(url, params=params, timeout=20)
+    response.raise_for_status()
+    weather = weather_frame(response.json())
+    weather["country"] = location["country"]
+    weather["site"] = location["site"]
+    weather["latitude"] = location["latitude"]
+    weather["longitude"] = location["longitude"]
+    weather["timezone"] = location["timezone"]
+    return weather
+
+
+def fetch_global_fire_weather() -> pd.DataFrame:
+    """Fetch live forecasts for representative Germany, USA, and Canada demo sites."""
+    frames = [fetch_location_weather(location) for location in GLOBAL_FIRE_LOCATIONS]
+    return pd.concat(frames, ignore_index=True)
 
 
 def fetch_hurtgenwald_recent_weather(past_days: int = 14) -> pd.DataFrame:
