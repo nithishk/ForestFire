@@ -1000,9 +1000,12 @@ def global_country_cards(latest: pd.DataFrame) -> None:
     st.markdown(f"<div class='country-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
 
-def global_area_board(latest: pd.DataFrame) -> None:
+def global_area_board(latest: pd.DataFrame, limit: int | None = None) -> None:
     tiles = []
-    for row in latest.sort_values(["fire_weather_score", "temperature_c"], ascending=False).itertuples():
+    board = latest.sort_values(["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False)
+    if limit is not None:
+        board = board.head(limit)
+    for row in board.itertuples():
         risk = str(row.risk)
         score = float(row.fire_weather_score)
         score_width = max(4.0, min(score, 100.0))
@@ -1479,7 +1482,7 @@ with global_tab:
             "</div>",
             unsafe_allow_html=True,
         )
-        filter_left, filter_right, filter_third = st.columns([1, 1, 1.15])
+        filter_left, filter_right, filter_third, filter_fourth = st.columns([1, 1, 1.15, 0.85])
         with filter_left:
             country_options = ["All countries"] + sorted(latest_global["country"].unique().tolist())
             selected_country = st.selectbox("Country", country_options, key="global_country_filter")
@@ -1506,6 +1509,10 @@ with global_tab:
                 .tolist()
             )
             selected_detail = st.selectbox("Trend detail", detail_options, key="global_area_detail")
+
+        with filter_fourth:
+            card_limit_label = st.selectbox("Risk board", ["Top 8 areas", "Top 12 areas", "All areas"], key="global_card_limit")
+            card_limit = {"Top 8 areas": 8, "Top 12 areas": 12, "All areas": None}[card_limit_label]
 
         high_count = int(filtered_latest["risk"].isin(["High", "Critical"]).sum())
         temp_alerts = int((filtered_latest["temperature_c"] > 22).sum())
@@ -1537,8 +1544,9 @@ with global_tab:
             )
 
         st.markdown("#### State / Area Risk Board")
-        global_area_board(filtered_latest)
-        insight("Select a country or area to instantly focus the KPIs, cards, trend, and matrix.")
+        st.caption("Cards are sorted by highest fire-weather score first.")
+        global_area_board(filtered_latest, limit=card_limit)
+        insight("Use the country and area filters like PowerBI slicers. The board stays focused, while the matrix keeps the full selected dataset.")
 
         detail_country, detail_area, selected_site = [part.strip() for part in selected_detail.split("·", 2)]
         country_weather = global_weather[
@@ -1568,6 +1576,14 @@ with global_tab:
                 .rename(columns={"country": "Country", "Avg_Temp_C": "Avg temp (C)", "Avg_Wind_kmh": "Avg wind (km/h)", "Max_Score": "Max score"})
             )
             html_table(round_numeric(country_summary), use_container_width=True, hide_index=True)
+            st.markdown("#### Area Coverage")
+            coverage = (
+                latest_global.groupby("country", as_index=False)
+                .agg(Areas=("area", "nunique"))
+                .sort_values("Areas", ascending=False)
+                .rename(columns={"country": "Country"})
+            )
+            html_table(coverage, use_container_width=True, hide_index=True)
 
         with st.expander("Area Risk Matrix", expanded=True):
             comparison = filtered_latest[
