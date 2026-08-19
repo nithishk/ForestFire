@@ -157,6 +157,158 @@ st.markdown(
         margin: 2px 0 0 0;
         font-weight: 800;
     }
+    .bi-panel {
+        background:
+            linear-gradient(180deg, rgba(15,23,42,0.86), rgba(15,23,42,0.72)),
+            radial-gradient(circle at 16% 0%, rgba(34,197,94,0.16), transparent 32%);
+        border: 1px solid rgba(148,163,184,0.20);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin: 10px 0 14px 0;
+        box-shadow: 0 16px 34px rgba(2,6,23,0.28);
+    }
+    .bi-title {
+        color: #f8fafc;
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+    .bi-subtitle {
+        color: #b6c3d1;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    .bi-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin: 10px 0 16px 0;
+    }
+    .bi-kpi {
+        background: linear-gradient(180deg, #ffffff, #eef4f8);
+        border: 1px solid #d7e1ea;
+        border-radius: 10px;
+        padding: 12px 14px;
+        color: #0f2233;
+        box-shadow: 0 12px 26px rgba(2,6,23,0.16);
+        min-height: 94px;
+    }
+    .bi-kpi span {
+        display: block;
+        color: #53677a;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+    }
+    .bi-kpi strong {
+        display: block;
+        font-size: 1.62rem;
+        line-height: 1.05;
+    }
+    .bi-kpi em {
+        display: block;
+        color: #64748b;
+        font-style: normal;
+        font-size: 0.82rem;
+        margin-top: 7px;
+    }
+    .bi-kpi.alert {
+        background: linear-gradient(135deg, #991b1b, #ef4444);
+        border-color: rgba(254,202,202,0.45);
+        color: #fff7ed;
+    }
+    .bi-kpi.alert span,
+    .bi-kpi.alert em { color: #fee2e2; }
+    .area-board {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 10px;
+        margin: 8px 0 16px 0;
+    }
+    .area-tile {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, #ffffff, #f6f9fb);
+        color: #10212f;
+        border: 1px solid #d8e2ec;
+        border-left: 5px solid #22c55e;
+        border-radius: 10px;
+        padding: 13px 14px 12px 14px;
+        box-shadow: 0 10px 22px rgba(2,6,23,0.12);
+    }
+    .area-tile.high { border-left-color: #f97316; }
+    .area-tile.critical { border-left-color: #dc2626; }
+    .area-tile.elevated { border-left-color: #eab308; }
+    .area-tile h4 {
+        margin: 0 0 3px 0;
+        font-size: 1rem;
+    }
+    .area-tile .area-meta {
+        color: #64748b;
+        font-size: 0.8rem;
+        margin-bottom: 10px;
+    }
+    .area-tile .score-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .area-tile .score {
+        font-size: 1.28rem;
+        font-weight: 900;
+    }
+    .area-tile .badge {
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        background: #dcfce7;
+        color: #166534;
+    }
+    .area-tile.high .badge { background: #ffedd5; color: #9a3412; }
+    .area-tile.critical .badge { background: #fee2e2; color: #991b1b; }
+    .area-tile.elevated .badge { background: #fef9c3; color: #854d0e; }
+    .area-bar {
+        height: 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    .area-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+    }
+    .area-facts {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        color: #334155;
+        font-size: 0.78rem;
+    }
+    .area-facts strong {
+        display: block;
+        color: #10212f;
+        font-size: 0.9rem;
+        margin-top: 2px;
+    }
+    .bi-layout {
+        display: grid;
+        grid-template-columns: minmax(420px, 1.55fr) minmax(320px, 1fr);
+        gap: 14px;
+        align-items: start;
+    }
+    @media (max-width: 1000px) {
+        .bi-layout { grid-template-columns: 1fr; }
+    }
     .metric-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -632,6 +784,18 @@ def metric_cards(items: list[tuple[str, str]]) -> None:
     st.markdown(f"<div class='metric-grid'>{cards}</div>", unsafe_allow_html=True)
 
 
+def bi_kpi_cards(items: list[tuple[str, str, str, bool]]) -> None:
+    cards = "".join(
+        f"<div class='bi-kpi{' alert' if is_alert else ''}'>"
+        f"<span>{escape(label)}</span>"
+        f"<strong>{escape(value)}</strong>"
+        f"<em>{escape(note)}</em>"
+        "</div>"
+        for label, value, note, is_alert in items
+    )
+    st.markdown(f"<div class='bi-kpi-grid'>{cards}</div>", unsafe_allow_html=True)
+
+
 def _numeric_frame(data: pd.DataFrame | pd.Series) -> pd.DataFrame:
     if isinstance(data, pd.Series):
         frame = data.to_frame(name=data.name or "Value")
@@ -784,7 +948,7 @@ def country_card_class(risk: str) -> str:
 
 def latest_by_country(global_weather: pd.DataFrame) -> pd.DataFrame:
     rows = []
-    for (_, site), frame in global_weather.groupby(["country", "site"]):
+    for (_, area, site), frame in global_weather.groupby(["country", "area", "site"]):
         timezone = str(frame["timezone"].iat[0]) if "timezone" in frame.columns else "UTC"
         now = pd.Timestamp.now(tz=ZoneInfo(timezone)).tz_localize(None)
         future = frame[frame["time"] >= now]
@@ -807,7 +971,7 @@ def global_country_cards(latest: pd.DataFrame) -> None:
         cards.append(
             f"<div class='country-card {country_card_class(risk)}'>"
             f"<h4>{escape(row.country)}</h4>"
-            f"<div class='site'>{escape(row.site)}</div>"
+            f"<div class='site'>{escape(row.area)} · {escape(row.site)}</div>"
             f"<div class='risk'>{escape(risk)} risk</div>"
             "<dl>"
             f"<div><dt>Temp</dt><dd>{row.temperature_c:.1f} C</dd></div>"
@@ -820,6 +984,31 @@ def global_country_cards(latest: pd.DataFrame) -> None:
             "</div>"
         )
     st.markdown(f"<div class='country-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
+
+def global_area_board(latest: pd.DataFrame) -> None:
+    tiles = []
+    for row in latest.sort_values(["fire_weather_score", "temperature_c"], ascending=False).itertuples():
+        risk = str(row.risk)
+        score = float(row.fire_weather_score)
+        score_width = max(4.0, min(score, 100.0))
+        tiles.append(
+            f"<div class='area-tile {country_card_class(risk)}'>"
+            f"<h4>{escape(row.area)}</h4>"
+            f"<div class='area-meta'>{escape(row.country)} · {escape(row.site)}</div>"
+            "<div class='score-row'>"
+            f"<div class='score'>{score:.0f}</div>"
+            f"<div class='badge'>{escape(risk)}</div>"
+            "</div>"
+            f"<div class='area-bar'><span style='width:{score_width:.0f}%'></span></div>"
+            "<div class='area-facts'>"
+            f"<div>Temp<strong>{row.temperature_c:.1f} C</strong></div>"
+            f"<div>Wind<strong>{row.wind_kmh:.1f} km/h</strong></div>"
+            f"<div>Spread<strong>{escape(row.spread_direction)}</strong></div>"
+            "</div>"
+            "</div>"
+        )
+    st.markdown(f"<div class='area-board'>{''.join(tiles)}</div>", unsafe_allow_html=True)
 
 
 def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float, signal_time: object) -> None:
@@ -1263,46 +1452,114 @@ with live_nrw_tab:
 
 with global_tab:
     st.subheader("Global Fire-Weather Monitor")
-    st.write("Demo live forecast comparison for Germany, USA, and Canada.")
-    note("This is a demo monitor using representative wildfire-risk locations. Full country-wide grids should be handled by a scheduled data pipeline.")
+    st.write("PowerBI-style comparison for Germany, USA, and Canada.")
 
     try:
         global_weather = load_global_fire_weather()
         latest_global = latest_by_country(global_weather)
-        high_count = int(latest_global["risk"].isin(["High", "Critical"]).sum())
-        temp_alerts = int((latest_global["temperature_c"] > 22).sum())
-        windiest = latest_global.sort_values("wind_kmh", ascending=False).iloc[0]
 
-        metric_cards(
+        st.markdown(
+            "<div class='bi-panel'>"
+            "<div class='bi-title'>Dashboard filters</div>"
+            "<div class='bi-subtitle'>Pick a country or state/province to focus the whole page.</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        filter_left, filter_right, filter_third = st.columns([1, 1, 1.15])
+        with filter_left:
+            country_options = ["All countries"] + sorted(latest_global["country"].unique().tolist())
+            selected_country = st.selectbox("Country", country_options, key="global_country_filter")
+
+        country_filtered = latest_global.copy()
+        weather_filtered = global_weather.copy()
+        if selected_country != "All countries":
+            country_filtered = country_filtered[country_filtered["country"] == selected_country]
+            weather_filtered = weather_filtered[weather_filtered["country"] == selected_country]
+
+        with filter_right:
+            area_options = ["All areas"] + sorted(country_filtered["area"].unique().tolist())
+            selected_area = st.selectbox("State / province / area", area_options, key="global_area_filter")
+
+        filtered_latest = country_filtered.copy()
+        if selected_area != "All areas":
+            filtered_latest = filtered_latest[filtered_latest["area"] == selected_area]
+            weather_filtered = weather_filtered[weather_filtered["area"] == selected_area]
+
+        with filter_third:
+            detail_options = (
+                filtered_latest.assign(label=lambda d: d["country"] + " · " + d["area"] + " · " + d["site"])
+                .sort_values(["country", "area", "site"])["label"]
+                .tolist()
+            )
+            selected_detail = st.selectbox("Trend detail", detail_options, key="global_area_detail")
+
+        high_count = int(filtered_latest["risk"].isin(["High", "Critical"]).sum())
+        temp_alerts = int((filtered_latest["temperature_c"] > 22).sum())
+        windiest = filtered_latest.sort_values("wind_kmh", ascending=False).iloc[0]
+        hottest = filtered_latest.sort_values("temperature_c", ascending=False).iloc[0]
+        highest_risk = filtered_latest.sort_values(["fire_weather_score", "temperature_c"], ascending=False).iloc[0]
+
+        bi_kpi_cards(
             [
-                ("Countries", f"{latest_global['country'].nunique()}"),
-                ("High/Critical now", f"{high_count}"),
-                ("Temp alerts > 22 C", f"{temp_alerts}"),
-                ("Windiest site", f"{windiest['country']} {windiest['wind_kmh']:.1f} km/h"),
+                ("Highest risk", f"{highest_risk['risk']}", f"{highest_risk['area']} · {highest_risk['fire_weather_score']:.0f} score", highest_risk["risk"] in ["High", "Critical"]),
+                ("Areas monitored", f"{len(filtered_latest)}", f"{filtered_latest['country'].nunique()} countries in view", False),
+                ("Temp alerts > 22 C", f"{temp_alerts}", f"Hottest: {hottest['area']} {hottest['temperature_c']:.1f} C", temp_alerts > 0),
+                ("High/Critical now", f"{high_count}", "Current forecast snapshot", high_count > 0),
+                ("Windiest area", f"{windiest['wind_kmh']:.1f} km/h", f"{windiest['area']} · from {windiest['wind_direction']}", False),
             ]
         )
-        global_country_cards(latest_global)
-        insight("This gives a board-level view: where heat, wind, humidity, and likely spread direction need attention first.")
+        if temp_alerts:
+            st.markdown(
+                "<div class='temp-alert'>"
+                "<h4>Temperature alert active</h4>"
+                f"<p>{temp_alerts} monitored area(s) are above 22 C. Use this as a demo alert threshold for field teams.</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                "<div class='temp-ok'><h4>No temperature alert</h4><p>All monitored areas are at or below 22 C right now.</p></div>",
+                unsafe_allow_html=True,
+            )
 
-        selected_country = st.selectbox(
-            "Country detail",
-            latest_global["country"].tolist(),
-            key="global_country_detail",
-        )
-        selected_site = latest_global.loc[latest_global["country"] == selected_country, "site"].iat[0]
+        st.markdown("#### State / Area Risk Board")
+        global_area_board(filtered_latest)
+        insight("Select a country or area to instantly focus the KPIs, cards, trend, and matrix.")
+
+        detail_country, detail_area, selected_site = [part.strip() for part in selected_detail.split("·", 2)]
         country_weather = global_weather[
-            (global_weather["country"] == selected_country) & (global_weather["site"] == selected_site)
+            (global_weather["country"] == detail_country)
+            & (global_weather["area"] == detail_area)
+            & (global_weather["site"] == selected_site)
         ]
-        st.markdown(f"#### {selected_country}: {selected_site}")
-        svg_line_chart(
-            country_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
-            height=320,
-        )
+        left_panel, right_panel = st.columns([1.35, 1])
+        with left_panel:
+            st.markdown(f"#### Trend: {detail_area}")
+            st.caption(f"{detail_country} · {selected_site}")
+            svg_line_chart(
+                country_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
+                height=300,
+            )
+        with right_panel:
+            st.markdown("#### Country Summary")
+            country_summary = (
+                filtered_latest.groupby("country", as_index=False)
+                .agg(
+                    Areas=("area", "nunique"),
+                    Alerts=("temperature_c", lambda s: int((s > 22).sum())),
+                    Avg_Temp_C=("temperature_c", "mean"),
+                    Avg_Wind_kmh=("wind_kmh", "mean"),
+                    Max_Score=("fire_weather_score", "max"),
+                )
+                .rename(columns={"country": "Country", "Avg_Temp_C": "Avg temp (C)", "Avg_Wind_kmh": "Avg wind (km/h)", "Max_Score": "Max score"})
+            )
+            html_table(round_numeric(country_summary), use_container_width=True, hide_index=True)
 
-        with st.expander("Global comparison table"):
-            comparison = latest_global[
+        with st.expander("Area Risk Matrix", expanded=True):
+            comparison = filtered_latest[
                 [
                     "country",
+                    "area",
                     "site",
                     "risk",
                     "temperature_c",
@@ -1316,6 +1573,7 @@ with global_tab:
             ].rename(
                 columns={
                     "country": "Country",
+                    "area": "State / province / area",
                     "site": "Site",
                     "risk": "Risk now",
                     "temperature_c": "Temp (C)",
@@ -1328,6 +1586,7 @@ with global_tab:
                 }
             )
             html_table(round_numeric(comparison), use_container_width=True, hide_index=True)
+        note("Demo monitor uses representative areas, not full national grids. A production version should run scheduled gridded weather and fire-weather processing.")
     except Exception as exc:
         st.error("Global monitor data is temporarily unavailable.")
         st.caption(str(exc))

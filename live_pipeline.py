@@ -13,24 +13,75 @@ EFFIS_WMS_URL = "https://maps.effis.emergency.copernicus.eu/effis"
 GLOBAL_FIRE_LOCATIONS = [
     {
         "country": "Germany",
+        "area": "North Rhine-Westphalia",
         "site": "Huertgenwald, NRW",
         "latitude": 50.716,
         "longitude": 6.375,
         "timezone": "Europe/Berlin",
     },
     {
+        "country": "Germany",
+        "area": "Brandenburg",
+        "site": "Potsdam forest belt",
+        "latitude": 52.390,
+        "longitude": 13.064,
+        "timezone": "Europe/Berlin",
+    },
+    {
+        "country": "Germany",
+        "area": "Bavaria",
+        "site": "Bavarian Forest",
+        "latitude": 49.050,
+        "longitude": 13.250,
+        "timezone": "Europe/Berlin",
+    },
+    {
         "country": "USA",
+        "area": "California",
         "site": "Los Angeles foothills, CA",
         "latitude": 34.199,
         "longitude": -118.176,
         "timezone": "America/Los_Angeles",
     },
     {
+        "country": "USA",
+        "area": "Colorado",
+        "site": "Boulder foothills, CO",
+        "latitude": 40.015,
+        "longitude": -105.270,
+        "timezone": "America/Denver",
+    },
+    {
+        "country": "USA",
+        "area": "Oregon",
+        "site": "Bend dry forest, OR",
+        "latitude": 44.058,
+        "longitude": -121.315,
+        "timezone": "America/Los_Angeles",
+    },
+    {
         "country": "Canada",
+        "area": "Alberta",
         "site": "Fort McMurray, Alberta",
         "latitude": 56.726,
         "longitude": -111.380,
         "timezone": "America/Edmonton",
+    },
+    {
+        "country": "Canada",
+        "area": "British Columbia",
+        "site": "Kelowna wildland edge, BC",
+        "latitude": 49.888,
+        "longitude": -119.496,
+        "timezone": "America/Vancouver",
+    },
+    {
+        "country": "Canada",
+        "area": "Ontario",
+        "site": "Thunder Bay forest, ON",
+        "latitude": 48.380,
+        "longitude": -89.247,
+        "timezone": "America/Toronto",
     },
 ]
 WEATHER_VARIABLES = [
@@ -108,6 +159,7 @@ def fetch_location_weather(location: dict, forecast_days: int = 3) -> pd.DataFra
     response.raise_for_status()
     weather = weather_frame(response.json())
     weather["country"] = location["country"]
+    weather["area"] = location["area"]
     weather["site"] = location["site"]
     weather["latitude"] = location["latitude"]
     weather["longitude"] = location["longitude"]
