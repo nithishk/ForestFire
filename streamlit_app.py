@@ -339,6 +339,140 @@ st.markdown(
         color: #cbd5e1;
         font-size: 0.9rem;
     }
+    .action-panel {
+        background: linear-gradient(180deg, #ffffff, #f5f8fb);
+        border: 1px solid #d8e2ec;
+        border-left: 5px solid #0ea5e9;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin: 10px 0 16px 0;
+        color: #10212f;
+        box-shadow: 0 14px 30px rgba(2,6,23,0.13);
+    }
+    .action-panel.critical { border-left-color: #dc2626; }
+    .action-panel.high { border-left-color: #f97316; }
+    .action-panel.elevated { border-left-color: #eab308; }
+    .action-panel h4 {
+        margin: 0 0 8px 0;
+        font-size: 1.03rem;
+    }
+    .action-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    .action-list li {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 9px 10px;
+        color: #263746;
+    }
+    .product-hero {
+        background:
+            linear-gradient(135deg, rgba(5,46,22,0.92), rgba(15,23,42,0.78) 52%, rgba(127,29,29,0.76)),
+            radial-gradient(circle at 75% 10%, rgba(248,113,113,0.20), transparent 30%);
+        border: 1px solid rgba(148,163,184,0.20);
+        border-radius: 18px;
+        padding: 28px;
+        color: #f8fafc;
+        margin: 8px 0 18px 0;
+        box-shadow: 0 22px 48px rgba(2,6,23,0.34);
+    }
+    .product-kicker {
+        color: #86efac;
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+    .product-hero h2 {
+        margin: 0;
+        max-width: 820px;
+        font-size: clamp(2rem, 4vw, 3.6rem);
+        line-height: 1.02;
+    }
+    .product-hero p {
+        max-width: 760px;
+        color: #dbeafe;
+        font-size: 1.02rem;
+        margin: 14px 0 0 0;
+    }
+    .product-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px;
+        margin-top: 22px;
+    }
+    .product-stat {
+        border: 1px solid rgba(255,255,255,0.15);
+        background: rgba(15,23,42,0.45);
+        border-radius: 12px;
+        padding: 12px 14px;
+    }
+    .product-stat span {
+        display: block;
+        color: #93c5fd;
+        font-size: 0.76rem;
+        margin-bottom: 6px;
+    }
+    .product-stat strong {
+        display: block;
+        font-size: 1.15rem;
+    }
+    .phase-grid,
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+        margin: 10px 0 18px 0;
+    }
+    .phase-card,
+    .feature-card {
+        background: linear-gradient(180deg, #ffffff, #f4f8fb);
+        border: 1px solid #d8e2ec;
+        border-radius: 12px;
+        padding: 15px;
+        color: #10212f;
+        box-shadow: 0 12px 28px rgba(2,6,23,0.12);
+    }
+    .phase-card {
+        border-top: 5px solid #22c55e;
+    }
+    .phase-card:nth-child(2) { border-top-color: #f97316; }
+    .phase-card:nth-child(3) { border-top-color: #2563eb; }
+    .phase-card span,
+    .feature-card span {
+        display: inline-block;
+        color: #0f766e;
+        font-size: 0.74rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+    }
+    .phase-card h4,
+    .feature-card h4 {
+        margin: 0 0 7px 0;
+        font-size: 1.05rem;
+    }
+    .phase-card p,
+    .feature-card p {
+        margin: 0;
+        color: #475569;
+        font-size: 0.92rem;
+    }
+    .demo-cta {
+        background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+        border: 1px solid #a7f3d0;
+        border-radius: 14px;
+        padding: 16px;
+        color: #12382a;
+        margin: 10px 0 18px 0;
+    }
     .metric-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1173,9 +1307,9 @@ def effis_interactive_map(site: str, area: str, latitude: float, longitude: floa
         <div class="map-head">
           <div>
             <strong>{escape(site)}</strong>
-            <span>{escape(area)} - street map with Copernicus EFFIS Fire Weather Index overlay</span>
+            <span>{escape(area)} - roads, terrain, selected point, and fire-weather intensity overlay</span>
           </div>
-          <a href="{escape(layer_url)}" target="_blank" rel="noopener noreferrer">Open layer</a>
+          <a href="{escape(layer_url)}" target="_blank" rel="noopener noreferrer">Open source layer</a>
         </div>
         <div id="map"></div>
       </div>
@@ -1202,7 +1336,7 @@ def effis_interactive_map(site: str, area: str, latitude: float, longitude: floa
         legend.onAdd = function() {{
           const div = L.DomUtil.create('div', 'legend');
           div.innerHTML = `
-            <strong>FWI intensity</strong>
+            <strong>Fire-weather intensity</strong>
             <div class="legend-row"><span class="swatch" style="background:#9af7c2"></span>Low</div>
             <div class="legend-row"><span class="swatch" style="background:#d6ea42"></span>Moderate</div>
             <div class="legend-row"><span class="swatch" style="background:#f59e0b"></span>High</div>
@@ -1491,6 +1625,120 @@ def temperature_alert(temp_c: float, source: str, threshold: float = 22.0) -> No
         )
 
 
+def product_demo_page() -> None:
+    st.markdown(
+        """
+        <div class='product-hero'>
+          <div class='product-kicker'>CTRL-F Fire Prediction Alerts</div>
+          <h2>Detect risk early. Alert field teams. Support faster response.</h2>
+          <p>
+            CTRL-F brings sensor signals, live weather, wind direction, and fire-weather history into one
+            operational workspace for teams monitoring high-risk landscapes.
+          </p>
+          <div class='product-stats'>
+            <div class='product-stat'><span>Signals</span><strong>Smoke · CO · IR · Weather</strong></div>
+            <div class='product-stat'><span>Weather</span><strong>Live forecasts + history</strong></div>
+            <div class='product-stat'><span>Coverage</span><strong>Germany · USA · Canada</strong></div>
+            <div class='product-stat'><span>Output</span><strong>Risk score + action brief</strong></div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Operational Workflow")
+    phases = [
+        ("Before", "Risk readiness", "Compare monitored areas, review heat/wind/humidity, and identify locations needing extra attention."),
+        ("During", "Alert and response", "Use sensor probability, wind direction, and fire-weather intensity to decide where teams should look first."),
+        ("After", "Incident review", "Review historical weather windows and export a concise brief for reporting or stakeholder updates."),
+    ]
+    phase_html = "".join(
+        "<div class='phase-card'>"
+        f"<span>{escape(phase)}</span>"
+        f"<h4>{escape(title)}</h4>"
+        f"<p>{escape(body)}</p>"
+        "</div>"
+        for phase, title, body in phases
+    )
+    st.markdown(f"<div class='phase-grid'>{phase_html}</div>", unsafe_allow_html=True)
+
+    st.markdown("#### Platform Capabilities")
+    features = [
+        ("Live weather alerts", "Select Germany regions and track current temperature, humidity, rain, wind, and spread direction."),
+        ("Regional monitor", "Compare Germany, USA, and Canada monitoring areas with a prioritized risk queue."),
+        ("Sensor prediction", "Turn smoke, CO, heat, humidity, wind, and IR signals into a fire-probability score."),
+        ("EFFIS map context", "View Copernicus fire-weather intensity on top of a street map with a selected-area marker."),
+        ("Historical risk review", "Reconstruct incident windows for multiple Germany regions and export a review brief."),
+        ("Brief exports", "Download alert and historical summaries for field communication or client demos."),
+    ]
+    feature_html = "".join(
+        "<div class='feature-card'>"
+        f"<span>Capability</span>"
+        f"<h4>{escape(title)}</h4>"
+        f"<p>{escape(body)}</p>"
+        "</div>"
+        for title, body in features
+    )
+    st.markdown(f"<div class='feature-grid'>{feature_html}</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div class='demo-cta'><strong>Demo path:</strong> Start with Fire Prediction, then open Live Weather for a selected Germany region, and finish with Regional Monitor or Historical Risk for wider context.</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def operational_actions(risk: str, temp_c: float, wind_kmh: float, wind_direction: str, spread_direction: str) -> list[str]:
+    actions = []
+    if risk in {"Critical", "High"}:
+        actions.append("Escalate to field lead and keep the area under active watch.")
+        actions.append(f"Position observers downwind. Wind is from {wind_direction}, likely spread is toward {spread_direction}.")
+    elif risk == "Elevated":
+        actions.append("Keep the area on watch and review the next forecast window.")
+    else:
+        actions.append("Continue routine monitoring; no strong fire-weather signal right now.")
+    if temp_c > 22:
+        actions.append(f"Temperature is above the configured alert threshold at {temp_c:.1f} C.")
+    if wind_kmh >= 20:
+        actions.append(f"Wind is notable at {wind_kmh:.1f} km/h; spread direction should be reviewed.")
+    return actions[:4]
+
+
+def action_panel(title: str, risk: str, actions: list[str]) -> None:
+    panel_class = country_card_class(risk)
+    items = "".join(f"<li>{escape(action)}</li>" for action in actions)
+    st.markdown(
+        f"<div class='action-panel {panel_class}'>"
+        f"<h4>{escape(title)}</h4>"
+        f"<ul class='action-list'>{items}</ul>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def incident_brief_text(
+    location: dict,
+    latest: pd.Series,
+    latest_risk: str,
+    worst: pd.Series,
+    worst_risk: str,
+    actions: list[str],
+) -> str:
+    action_lines = "\n".join(f"- {action}" for action in actions)
+    return (
+        "CTRL-F Fire Prediction Alert Brief\n"
+        f"Generated: {pd.Timestamp.now():%Y-%m-%d %H:%M}\n\n"
+        f"Area: {location['area']}\n"
+        f"Site: {location['site']}\n"
+        f"Current risk: {latest_risk}\n"
+        f"Temperature: {float(latest['temperature_c']):.1f} C\n"
+        f"Humidity: {float(latest['humidity_pct']):.0f}%\n"
+        f"Wind: {float(latest['wind_kmh']):.1f} km/h from {latest['wind_direction']}\n"
+        f"Worst forecast window: {worst_risk} on {worst['time']:%d %b %Y, %H:%M}\n\n"
+        "Recommended actions:\n"
+        f"{action_lines}\n"
+    )
+
+
 def friendly_daily_table(frame: pd.DataFrame) -> pd.DataFrame:
     return (
         frame.rename(
@@ -1530,9 +1778,12 @@ data = load_data()
 
 compact_header()
 
-overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab = st.tabs(
-    ["Overview", "Fire Prediction", "Live Weather", "Regional Monitor", "Historical Risk", "Weather Analysis"]
+product_tab, overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab = st.tabs(
+    ["Product Demo", "Overview", "Fire Prediction", "Live Weather", "Regional Monitor", "Historical Risk", "Weather Analysis"]
 )
+
+with product_tab:
+    product_demo_page()
 
 with overview_tab:
     st.subheader("Mission View")
@@ -1610,6 +1861,22 @@ with live_nrw_tab:
 
         insight(
             f"Highest forecast risk in the next 3 days: {worst_risk} on {worst['time']:%d %b, %H:%M}."
+        )
+        spread_direction = degrees_to_compass((float(latest["wind_direction_deg"]) + 180) % 360)
+        actions = operational_actions(
+            latest_risk,
+            float(latest["temperature_c"]),
+            float(latest["wind_kmh"]),
+            str(latest["wind_direction"]),
+            spread_direction,
+        )
+        action_panel("Recommended response", latest_risk, actions)
+        st.download_button(
+            "Download alert brief",
+            data=incident_brief_text(selected_location, latest, latest_risk, worst, worst_risk, actions),
+            file_name=f"ctrlf_alert_brief_{selected_location['area'].lower().replace(' ', '_')}.txt",
+            mime="text/plain",
+            use_container_width=True,
         )
 
         left, right = st.columns([2, 1])
@@ -1755,6 +2022,38 @@ with global_tab:
         st.caption("Cards are sorted by highest fire-weather score first.")
         global_area_board(filtered_latest, limit=card_limit)
         insight("Use the filters to focus the operational view. The board highlights priority areas, while the matrix keeps the full selected dataset.")
+
+        st.markdown("#### Priority Queue")
+        priority_queue = (
+            filtered_latest.sort_values(["fire_weather_score", "temperature_c", "wind_kmh"], ascending=False)
+            .head(6)[
+                [
+                    "country",
+                    "area",
+                    "site",
+                    "risk",
+                    "temperature_c",
+                    "humidity_pct",
+                    "wind_kmh",
+                    "wind_direction",
+                    "spread_direction",
+                ]
+            ]
+            .rename(
+                columns={
+                    "country": "Country",
+                    "area": "Area",
+                    "site": "Site",
+                    "risk": "Risk",
+                    "temperature_c": "Temp (C)",
+                    "humidity_pct": "Humidity (%)",
+                    "wind_kmh": "Wind (km/h)",
+                    "wind_direction": "Wind from",
+                    "spread_direction": "Spread toward",
+                }
+            )
+        )
+        html_table(round_numeric(priority_queue), use_container_width=True, hide_index=True)
 
         detail_country, detail_area, selected_site = [part.strip() for part in selected_detail.split("·", 2)]
         country_weather = global_weather[
@@ -1989,6 +2288,21 @@ with historical_nrw_tab:
                 insight(
                     f"Highest risk: {worst_risk} on {worst['time']:%d %b, %H:%M}. "
                     "This shows conditions that could support spread; it does not identify the ignition cause."
+                )
+                historical_actions = operational_actions(
+                    worst_risk,
+                    float(worst["temperature_c"]),
+                    float(worst["wind_kmh"]),
+                    str(worst["wind_direction"]),
+                    degrees_to_compass((float(worst["wind_direction_deg"]) + 180) % 360),
+                )
+                action_panel("Incident review notes", worst_risk, historical_actions)
+                st.download_button(
+                    "Download historical review",
+                    data=incident_brief_text(selected_history_location, worst, worst_risk, worst, worst_risk, historical_actions),
+                    file_name=f"ctrlf_historical_review_{selected_history_location['area'].lower().replace(' ', '_')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
                 )
 
                 left, right = st.columns([2, 1])
