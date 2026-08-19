@@ -552,6 +552,7 @@ st.markdown(
         padding: 15px;
         color: #10212f;
         box-shadow: 0 12px 28px rgba(2,6,23,0.12);
+        min-height: 132px;
     }
     .phase-card {
         border-top: 5px solid #22c55e;
@@ -572,12 +573,14 @@ st.markdown(
     .feature-card h4 {
         margin: 0 0 7px 0;
         font-size: 1.05rem;
+        line-height: 1.25;
     }
     .phase-card p,
     .feature-card p {
         margin: 0;
         color: #475569;
         font-size: 0.92rem;
+        line-height: 1.5;
     }
     .demo-cta {
         background: linear-gradient(135deg, #ecfdf5, #eff6ff);
@@ -692,59 +695,169 @@ st.markdown(
     }
     .screenshot-gallery {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 14px;
-        margin: 10px 0 18px 0;
+        grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+        gap: 16px;
+        margin: 12px 0 22px 0;
     }
     .screen-card {
         background: linear-gradient(180deg, #ffffff, #f4f8fb);
         border: 1px solid #d8e2ec;
-        border-radius: 14px;
+        border-radius: 16px;
         overflow: hidden;
         color: #10212f;
-        box-shadow: 0 16px 34px rgba(2,6,23,0.16);
+        box-shadow: 0 18px 38px rgba(2,6,23,0.18);
     }
     .screen-visual {
-        height: 180px;
+        height: 220px;
         position: relative;
         overflow: hidden;
         background: #e2e8f0;
     }
     .screen-map {
         background:
-            linear-gradient(35deg, transparent 0 42%, rgba(59,130,246,0.30) 42% 44%, transparent 44%),
-            linear-gradient(-25deg, transparent 0 48%, rgba(148,163,184,0.48) 48% 50%, transparent 50%),
-            linear-gradient(135deg, #dcfce7 0 38%, #e0f2fe 38% 62%, #fef9c3 62% 76%, #fee2e2 76% 100%);
+            linear-gradient(35deg, transparent 0 38%, rgba(59,130,246,0.28) 38% 40%, transparent 40%),
+            linear-gradient(-25deg, transparent 0 50%, rgba(100,116,139,0.44) 50% 52%, transparent 52%),
+            linear-gradient(100deg, rgba(22,163,74,0.16), transparent 46%),
+            linear-gradient(135deg, #dcfce7 0 34%, #e0f2fe 34% 58%, #fef9c3 58% 74%, #fee2e2 74% 100%);
+    }
+    .map-panel {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        width: 150px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #dbe3ea;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 12px 24px rgba(15,23,42,0.16);
+    }
+    .map-panel strong,
+    .screen-legend strong {
+        display: block;
+        font-size: 0.82rem;
+        margin-bottom: 5px;
+    }
+    .map-panel span {
+        display: block;
+        color: #64748b;
+        font-size: 0.74rem;
+    }
+    .screen-legend {
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #dbe3ea;
+        border-radius: 10px;
+        padding: 9px 10px;
+        box-shadow: 0 12px 24px rgba(15,23,42,0.14);
+    }
+    .legend-mini {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #475569;
+        font-size: 0.72rem;
+        margin-top: 4px;
+    }
+    .legend-mini i {
+        width: 12px;
+        height: 8px;
+        border-radius: 3px;
+        display: inline-block;
     }
     .screen-dashboard {
-        background: #111827;
+        background: linear-gradient(135deg, #0f172a, #111827);
         padding: 14px;
         box-sizing: border-box;
     }
-    .screen-row {
-        height: 18px;
-        border-radius: 6px;
-        background: #334155;
-        margin-bottom: 9px;
+    .screen-toolbar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 12px;
     }
-    .screen-row:nth-child(2) { width: 76%; background: #475569; }
-    .screen-row:nth-child(3) { width: 88%; background: #166534; }
-    .screen-row:nth-child(4) { width: 64%; background: #7f1d1d; }
+    .screen-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #64748b;
+    }
+    .priority-table {
+        display: grid;
+        gap: 8px;
+    }
+    .priority-row {
+        display: grid;
+        grid-template-columns: 1.1fr 0.7fr 0.7fr;
+        gap: 8px;
+        align-items: center;
+        background: rgba(15,23,42,0.74);
+        border: 1px solid rgba(148,163,184,0.22);
+        border-radius: 10px;
+        padding: 9px;
+        color: #e2e8f0;
+        font-size: 0.78rem;
+    }
+    .priority-row:first-child {
+        background: rgba(248,250,252,0.10);
+        color: #93c5fd;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 0.7rem;
+    }
+    .risk-pill {
+        border-radius: 999px;
+        padding: 4px 7px;
+        text-align: center;
+        font-weight: 900;
+        font-size: 0.72rem;
+    }
+    .risk-red { background: #fee2e2; color: #991b1b; }
+    .risk-amber { background: #ffedd5; color: #9a3412; }
+    .risk-green { background: #dcfce7; color: #166534; }
     .screen-chart {
         background:
-            linear-gradient(180deg, transparent 0 70%, rgba(37,99,235,0.75) 70% 100%),
-            linear-gradient(135deg, #f8fafc, #e0f2fe);
+            linear-gradient(180deg, #f8fafc, #e0f2fe);
     }
     .screen-chart:before {
         content: "";
         position: absolute;
         left: 28px;
         right: 28px;
-        bottom: 42px;
-        height: 46px;
+        bottom: 54px;
+        height: 78px;
         border-left: 4px solid #2563eb;
         border-bottom: 4px solid #2563eb;
-        transform: skewX(-24deg);
+        transform: skewX(-22deg);
+    }
+    .chart-band {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 34px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+        opacity: 0.72;
+    }
+    .chart-note {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #dbe3ea;
+        border-radius: 10px;
+        padding: 9px 10px;
+        box-shadow: 0 12px 24px rgba(15,23,42,0.12);
+    }
+    .chart-note strong {
+        display: block;
+        font-size: 0.82rem;
+    }
+    .chart-note span {
+        color: #64748b;
+        font-size: 0.74rem;
     }
     .screen-pin {
         position: absolute;
@@ -1979,17 +2092,35 @@ def product_demo_page() -> None:
         """
         <div class='screenshot-gallery'>
           <div class='screen-card'>
-            <div class='screen-visual screen-map'><div class='screen-pin'></div></div>
+            <div class='screen-visual screen-map'>
+              <div class='map-panel'><strong>Hürtgenwald sector</strong><span>FWI overlay active</span><span>Wind SW → NE</span></div>
+              <div class='screen-pin'></div>
+              <div class='screen-legend'>
+                <strong>Intensity</strong>
+                <div class='legend-mini'><i style='background:#9af7c2'></i>Low</div>
+                <div class='legend-mini'><i style='background:#f59e0b'></i>High</div>
+                <div class='legend-mini'><i style='background:#dc2626'></i>Very high</div>
+              </div>
+            </div>
             <div class='screen-body'><span>Map view</span><strong>Fire-weather context</strong><p>Selected area marker with roads, terrain, and EFFIS intensity overlay.</p></div>
           </div>
           <div class='screen-card'>
             <div class='screen-visual screen-dashboard'>
-              <div class='screen-row'></div><div class='screen-row'></div><div class='screen-row'></div><div class='screen-row'></div>
+              <div class='screen-toolbar'><div class='screen-dot'></div><div class='screen-dot'></div><div class='screen-dot'></div></div>
+              <div class='priority-table'>
+                <div class='priority-row'><div>Area</div><div>Risk</div><div>Wind</div></div>
+                <div class='priority-row'><div>Saxony</div><div><span class='risk-pill risk-red'>High</span></div><div>28 km/h</div></div>
+                <div class='priority-row'><div>Brandenburg</div><div><span class='risk-pill risk-amber'>Elevated</span></div><div>21 km/h</div></div>
+                <div class='priority-row'><div>Bavaria</div><div><span class='risk-pill risk-green'>Low</span></div><div>12 km/h</div></div>
+              </div>
             </div>
             <div class='screen-body'><span>Operations</span><strong>Priority queue</strong><p>Compare monitored areas and focus field attention on the highest-risk locations.</p></div>
           </div>
           <div class='screen-card'>
-            <div class='screen-visual screen-chart'></div>
+            <div class='screen-visual screen-chart'>
+              <div class='chart-note'><strong>Incident window</strong><span>14-day weather review</span></div>
+              <div class='chart-band'></div>
+            </div>
             <div class='screen-body'><span>Review</span><strong>Historical risk window</strong><p>Reconstruct weather conditions and export a concise incident review.</p></div>
           </div>
         </div>
