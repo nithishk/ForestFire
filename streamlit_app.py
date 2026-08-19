@@ -690,6 +690,95 @@ st.markdown(
         color: #cbd5e1;
         font-size: 0.86rem;
     }
+    .screenshot-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+        margin: 10px 0 18px 0;
+    }
+    .screen-card {
+        background: linear-gradient(180deg, #ffffff, #f4f8fb);
+        border: 1px solid #d8e2ec;
+        border-radius: 14px;
+        overflow: hidden;
+        color: #10212f;
+        box-shadow: 0 16px 34px rgba(2,6,23,0.16);
+    }
+    .screen-visual {
+        height: 180px;
+        position: relative;
+        overflow: hidden;
+        background: #e2e8f0;
+    }
+    .screen-map {
+        background:
+            linear-gradient(35deg, transparent 0 42%, rgba(59,130,246,0.30) 42% 44%, transparent 44%),
+            linear-gradient(-25deg, transparent 0 48%, rgba(148,163,184,0.48) 48% 50%, transparent 50%),
+            linear-gradient(135deg, #dcfce7 0 38%, #e0f2fe 38% 62%, #fef9c3 62% 76%, #fee2e2 76% 100%);
+    }
+    .screen-dashboard {
+        background: #111827;
+        padding: 14px;
+        box-sizing: border-box;
+    }
+    .screen-row {
+        height: 18px;
+        border-radius: 6px;
+        background: #334155;
+        margin-bottom: 9px;
+    }
+    .screen-row:nth-child(2) { width: 76%; background: #475569; }
+    .screen-row:nth-child(3) { width: 88%; background: #166534; }
+    .screen-row:nth-child(4) { width: 64%; background: #7f1d1d; }
+    .screen-chart {
+        background:
+            linear-gradient(180deg, transparent 0 70%, rgba(37,99,235,0.75) 70% 100%),
+            linear-gradient(135deg, #f8fafc, #e0f2fe);
+    }
+    .screen-chart:before {
+        content: "";
+        position: absolute;
+        left: 28px;
+        right: 28px;
+        bottom: 42px;
+        height: 46px;
+        border-left: 4px solid #2563eb;
+        border-bottom: 4px solid #2563eb;
+        transform: skewX(-24deg);
+    }
+    .screen-pin {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        left: 56%;
+        top: 42%;
+        border-radius: 999px;
+        background: #dc2626;
+        border: 5px solid rgba(254,202,202,0.88);
+        box-shadow: 0 0 0 10px rgba(220,38,38,0.12);
+    }
+    .screen-body {
+        padding: 13px 14px 15px 14px;
+    }
+    .screen-body span {
+        display: block;
+        color: #0f766e;
+        font-size: 0.74rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
+    }
+    .screen-body strong {
+        display: block;
+        font-size: 1.04rem;
+        margin-bottom: 6px;
+    }
+    .screen-body p {
+        margin: 0;
+        color: #526678;
+        font-size: 0.9rem;
+    }
     .metric-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1879,6 +1968,29 @@ def product_demo_page() -> None:
                 <div class='console-metric'><span>Action</span><strong>Brief sent</strong></div>
               </div>
             </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Product Screens")
+    st.markdown(
+        """
+        <div class='screenshot-gallery'>
+          <div class='screen-card'>
+            <div class='screen-visual screen-map'><div class='screen-pin'></div></div>
+            <div class='screen-body'><span>Map view</span><strong>Fire-weather context</strong><p>Selected area marker with roads, terrain, and EFFIS intensity overlay.</p></div>
+          </div>
+          <div class='screen-card'>
+            <div class='screen-visual screen-dashboard'>
+              <div class='screen-row'></div><div class='screen-row'></div><div class='screen-row'></div><div class='screen-row'></div>
+            </div>
+            <div class='screen-body'><span>Operations</span><strong>Priority queue</strong><p>Compare monitored areas and focus field attention on the highest-risk locations.</p></div>
+          </div>
+          <div class='screen-card'>
+            <div class='screen-visual screen-chart'></div>
+            <div class='screen-body'><span>Review</span><strong>Historical risk window</strong><p>Reconstruct weather conditions and export a concise incident review.</p></div>
           </div>
         </div>
         """,
