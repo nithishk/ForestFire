@@ -600,9 +600,17 @@ st.markdown(
         border-radius: 12px;
         padding: 14px;
         box-shadow: 0 14px 30px rgba(2,6,23,0.20);
+        min-height: 158px;
     }
-    .demo-step span {
+    .demo-step-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .step-number {
         display: inline-flex;
+        flex: 0 0 26px;
         width: 26px;
         height: 26px;
         align-items: center;
@@ -611,16 +619,76 @@ st.markdown(
         color: #052e16;
         border-radius: 999px;
         font-weight: 900;
-        margin-bottom: 9px;
     }
     .demo-step h4 {
-        margin: 0 0 6px 0;
+        margin: 0;
         font-size: 1rem;
+        line-height: 1.2;
+        color: #f8fafc;
+        overflow-wrap: anywhere;
     }
     .demo-step p {
         margin: 0;
         color: #cbd5e1;
         font-size: 0.9rem;
+    }
+    .planning-band {
+        background: linear-gradient(135deg, #f8fafc, #eef7f0);
+        border: 1px solid #d8e2ec;
+        border-radius: 14px;
+        padding: 16px;
+        color: #10212f;
+        margin: 10px 0 18px 0;
+        box-shadow: 0 14px 30px rgba(2,6,23,0.12);
+    }
+    .planning-band h4 {
+        margin: 0 0 8px 0;
+        font-size: 1.08rem;
+    }
+    .planning-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+    }
+    .planning-item {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 11px;
+    }
+    .planning-item strong {
+        display: block;
+        margin-bottom: 5px;
+    }
+    .planning-item span {
+        color: #64748b;
+        font-size: 0.88rem;
+    }
+    .source-stack {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin: 10px 0 18px 0;
+    }
+    .source-chip {
+        background: #111827;
+        border: 1px solid rgba(148,163,184,0.25);
+        border-left: 4px solid #22c55e;
+        border-radius: 12px;
+        padding: 12px;
+        color: #f8fafc;
+    }
+    .source-chip:nth-child(2) { border-left-color: #38bdf8; }
+    .source-chip:nth-child(3) { border-left-color: #f97316; }
+    .source-chip:nth-child(4) { border-left-color: #a78bfa; }
+    .source-chip strong {
+        display: block;
+        margin-bottom: 5px;
+    }
+    .source-chip span {
+        color: #cbd5e1;
+        font-size: 0.86rem;
     }
     .metric-grid {
         display: grid;
@@ -1842,13 +1910,51 @@ def product_demo_page() -> None:
     ]
     step_html = "".join(
         "<div class='demo-step'>"
-        f"<span>{escape(number)}</span>"
+        "<div class='demo-step-head'>"
+        f"<div class='step-number'>{escape(number)}</div>"
         f"<h4>{escape(title)}</h4>"
+        "</div>"
         f"<p>{escape(body)}</p>"
         "</div>"
         for number, title, body in steps
     )
     st.markdown(f"<div class='demo-step-grid'>{step_html}</div>", unsafe_allow_html=True)
+
+    st.markdown("#### Planning Intelligence")
+    st.markdown(
+        """
+        <div class='planning-band'>
+          <h4>From alerting to mitigation planning</h4>
+          <div>
+            The product direction is to help teams decide where risk is highest, which locations need attention,
+            and how response effort should be prioritized before conditions become critical.
+          </div>
+          <div class='planning-list'>
+            <div class='planning-item'><strong>Asset risk</strong><span>Attach risk scores to monitored zones, sensor nodes, substations, roads, or forest blocks.</span></div>
+            <div class='planning-item'><strong>Impact and likelihood</strong><span>Separate what is most probable from what would create the largest consequence.</span></div>
+            <div class='planning-item'><strong>Risk reduction</strong><span>Use historical weather windows to justify inspections, vegetation work, or sensor expansion.</span></div>
+            <div class='planning-item'><strong>Response planning</strong><span>Turn wind direction and current conditions into field-ready action briefs.</span></div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Detection Stack")
+    sources = [
+        ("Ground sensors", "Smoke, CO, infrared, temperature, humidity, and battery status."),
+        ("Weather feeds", "Forecast and historical temperature, rain, humidity, wind speed, and wind direction."),
+        ("Fire-weather maps", "Copernicus EFFIS context layered on a street map for situational awareness."),
+        ("Future inputs", "Camera, satellite, drone, vegetation, fuel moisture, and asset layers can be added later."),
+    ]
+    source_html = "".join(
+        "<div class='source-chip'>"
+        f"<strong>{escape(title)}</strong>"
+        f"<span>{escape(body)}</span>"
+        "</div>"
+        for title, body in sources
+    )
+    st.markdown(f"<div class='source-stack'>{source_html}</div>", unsafe_allow_html=True)
 
     st.markdown("#### Platform Capabilities")
     features = [
