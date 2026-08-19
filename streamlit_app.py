@@ -17,7 +17,7 @@ DATA_DIR = ROOT / "outputs" / "weather_analysis"
 GLOBAL_MONITOR_CACHE_VERSION = "global-areas-v2"
 
 
-st.set_page_config(page_title="Weather Pattern Dashboard", layout="wide")
+st.set_page_config(page_title="CTRL-F Fire Prediction Alerts", layout="wide")
 
 st.markdown(
     """
@@ -1057,7 +1057,7 @@ def sensor_network_view(latest: pd.DataFrame) -> None:
         "<defs><marker id='arrowhead' markerWidth='10' markerHeight='7' refX='9' refY='3.5' orient='auto'><polygon points='0 0, 10 3.5, 0 7' fill='#2563eb'/></marker></defs>",
         "<rect width='100%' height='100%' rx='8' fill='#f8fafc'/>",
         "<rect x='35' y='35' width='830' height='290' rx='8' fill='none' stroke='#94a3b8' stroke-dasharray='10 8'/>",
-        "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Huertgenwald sensor grid</text>",
+        "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Field sensor grid</text>",
     ]
     top_sensor = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
     for row in latest.itertuples():
@@ -1119,7 +1119,7 @@ def hero_section() -> None:
             Sensor signals, live weather, wind direction, and historical fire-weather context in one operational view.
           </div>
           <div class='status-row'>
-            <div class='status-pill'><span>Region</span><strong>Hürtgenwald, NRW</strong></div>
+            <div class='status-pill'><span>Coverage</span><strong>Multi-region</strong></div>
             <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
             <div class='status-pill'><span>Prediction</span><strong>Fire probability</strong></div>
             <div class='status-pill'><span>Data Inputs</span><strong>Weather + Sensors</strong></div>
@@ -1139,8 +1139,8 @@ def compact_header() -> None:
             <span>Operational view for sensor signals, weather, and wind-driven spread.</span>
           </div>
           <div class='topbar-chips'>
-            <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
-            <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
+            <div class='status-pill'><span>Coverage</span><strong>Germany · USA · Canada</strong></div>
+            <div class='status-pill'><span>Signals</span><strong>Sensors + Weather</strong></div>
           </div>
         </div>
         """,
@@ -1343,7 +1343,7 @@ data = load_data()
 compact_header()
 
 overview_tab, sensor_demo_tab, live_nrw_tab, global_tab, historical_nrw_tab, weather_tab, patterns_tab = st.tabs(
-    ["Overview", "Fire Prediction", "Live NRW", "Global Monitor", "Historical NRW", "Weather Analysis", "Patterns"]
+    ["Overview", "Fire Prediction", "Live Weather", "Regional Monitor", "Historical Risk", "Weather Analysis", "Patterns"]
 )
 
 with overview_tab:
@@ -1351,13 +1351,13 @@ with overview_tab:
     metric_cards(
         [
             ("System focus", "Sensors + weather"),
-            ("Target area", "Hürtgenwald"),
+            ("Coverage", "Multi-region"),
             ("Core signal", "Fire probability"),
             ("Data inputs", "Weather + sensors"),
         ]
     )
     insight(
-        "The current view combines ground-sensor signals with live NRW weather and fire-weather context."
+        "The current view combines ground-sensor signals, live weather, wind direction, and regional fire-weather context."
     )
 
     left, right = st.columns(2)
@@ -1380,11 +1380,11 @@ with overview_tab:
         )
         html_table(flow)
 
-    note("Fire Prediction currently uses sample sensor readings. Live NRW uses weather API calls and Copernicus EFFIS map layers.")
+    note("Fire Prediction currently uses sample sensor readings. Live Weather uses weather API calls and Copernicus EFFIS map layers.")
 
 with live_nrw_tab:
-    st.subheader("Live NRW: Hürtgenwald")
-    st.write("Current forecast conditions and Copernicus EFFIS fire-weather layer.")
+    st.subheader("Live Weather Alert")
+    st.write("Current forecast conditions and Copernicus EFFIS fire-weather layer for the selected operational area.")
     st.caption("Weather feed: Open-Meteo forecast. Fire danger map: Copernicus EFFIS WMS.")
 
     try:
@@ -1405,7 +1405,7 @@ with live_nrw_tab:
                 ("Direction", f"{latest['wind_direction']} ({latest['wind_direction_deg']:.0f} deg)"),
             ]
         )
-        temperature_alert(float(latest["temperature_c"]), "Live NRW weather")
+        temperature_alert(float(latest["temperature_c"]), "Selected-area weather")
 
         insight(
             f"Highest forecast risk in the next 3 days: {worst_risk} on {worst['time']:%d %b, %H:%M}."
@@ -1414,7 +1414,7 @@ with live_nrw_tab:
         left, right = st.columns([2, 1])
         with left:
             st.markdown("#### Forecast Inputs")
-            st.caption("Temperature, humidity, wind, and rain for Hürtgenwald.")
+            st.caption("Temperature, humidity, wind, and rain for the selected operational area.")
             svg_line_chart(
                 live_weather.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
                 height=360,
@@ -1429,7 +1429,7 @@ with live_nrw_tab:
         svg_bar_chart(direction_counts(live_weather, "wind_direction"), height=260)
 
         st.markdown("#### Copernicus EFFIS Fire Weather Index")
-        st.caption("EFFIS WMS layer for the Hürtgenwald/NRW area.")
+        st.caption("EFFIS WMS layer for the selected operational area.")
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
 
         with st.expander("Show live forecast table"):
@@ -1717,8 +1717,9 @@ with sensor_demo_tab:
         signal_cards()
 
 with historical_nrw_tab:
-    st.subheader("Historical NRW: Hürtgenwald")
+    st.subheader("Historical Risk Review")
     st.write("Review past weather conditions around an incident window.")
+    st.caption("Current case study: Hürtgenwald, North Rhine-Westphalia.")
 
     default_end = pd.Timestamp.today().date()
     default_start = default_end - pd.Timedelta(days=14)
@@ -1848,7 +1849,7 @@ with historical_nrw_tab:
 
 with weather_tab:
     st.subheader("Weather Analysis")
-    st.write("Choose a dataset to explore. This keeps Paris and Germany analysis in one place.")
+    st.write("Explore supporting research datasets for weather and wind-pattern analysis.")
     selected_weather = st.selectbox("Dataset", ["Paris weather", "Germany wind"], key="weather_analysis_dataset")
 
     if selected_weather == "Paris weather":
