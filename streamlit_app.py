@@ -745,7 +745,21 @@ def load_hurtgenwald_weather() -> pd.DataFrame:
 
 @st.cache_data(ttl=1800)
 def load_global_fire_weather() -> pd.DataFrame:
-    return fetch_global_fire_weather()
+    return prepare_global_weather(fetch_global_fire_weather())
+
+
+def prepare_global_weather(frame: pd.DataFrame) -> pd.DataFrame:
+    prepared = frame.copy()
+    if "area" not in prepared.columns:
+        prepared["area"] = prepared.get("site", prepared.get("country", "Monitored area"))
+    prepared["area"] = prepared["area"].fillna(prepared.get("site", "Monitored area"))
+    if "timezone" not in prepared.columns:
+        prepared["timezone"] = "UTC"
+    if "wind_direction" not in prepared.columns and "wind_direction_deg" in prepared.columns:
+        prepared["wind_direction"] = prepared["wind_direction_deg"].apply(degrees_to_compass)
+    if "spread_direction" not in prepared.columns and "wind_direction_deg" in prepared.columns:
+        prepared["spread_direction"] = prepared["wind_direction_deg"].apply(lambda value: degrees_to_compass((float(value) + 180) % 360))
+    return prepared
 
 
 @st.cache_data(ttl=3600)
