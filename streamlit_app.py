@@ -1033,7 +1033,7 @@ def global_area_board(latest: pd.DataFrame, limit: int | None = None) -> None:
 def risk_banner(sensor_id: str, zone: str, prediction: str, probability: float, signal_time: object) -> None:
     signal_label = format_signal_time(signal_time)
     message = (
-        f"{sensor_id} · {zone} is the strongest current signal from the demo sensor network."
+        f"{sensor_id} · {zone} is the strongest current signal in the sensor network."
     )
     st.markdown(
         "<div class='risk-banner "
@@ -1057,7 +1057,7 @@ def sensor_network_view(latest: pd.DataFrame) -> None:
         "<defs><marker id='arrowhead' markerWidth='10' markerHeight='7' refX='9' refY='3.5' orient='auto'><polygon points='0 0, 10 3.5, 0 7' fill='#2563eb'/></marker></defs>",
         "<rect width='100%' height='100%' rx='8' fill='#f8fafc'/>",
         "<rect x='35' y='35' width='830' height='290' rx='8' fill='none' stroke='#94a3b8' stroke-dasharray='10 8'/>",
-        "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Huertgenwald MVP sensor grid</text>",
+        "<text x='50' y='62' fill='#334155' font-size='14' font-weight='700'>Huertgenwald sensor grid</text>",
     ]
     top_sensor = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
     for row in latest.itertuples():
@@ -1113,14 +1113,14 @@ def hero_section() -> None:
     st.markdown(
         """
         <div class='hero'>
-          <div class='hero-kicker'>CTRL-F · Wildfire Intelligence MVP</div>
-          <div class='hero-title'>Early fire detection for field teams.</div>
+          <div class='hero-kicker'>CTRL-F · Fire Intelligence</div>
+          <div class='hero-title'>Field fire-risk operations view.</div>
           <div class='hero-subtitle'>
             Sensor signals, live weather, wind direction, and historical fire-weather context in one operational view.
           </div>
           <div class='status-row'>
             <div class='status-pill'><span>Region</span><strong>Hürtgenwald, NRW</strong></div>
-            <div class='status-pill'><span>Demo Mode</span><strong>Sensor + Weather</strong></div>
+            <div class='status-pill'><span>Mode</span><strong>Sensor + Weather</strong></div>
             <div class='status-pill'><span>Prediction</span><strong>Fire probability</strong></div>
             <div class='status-pill'><span>Data Inputs</span><strong>Weather + Sensors</strong></div>
           </div>
@@ -1136,7 +1136,7 @@ def compact_header() -> None:
         <div class='topbar'>
           <div class='topbar-title'>
             <strong>CTRL-F FireWatch</strong>
-            <span>Early fire detection using sensors, live weather, and wind direction.</span>
+            <span>Operational view for sensor signals, weather, and wind-driven spread.</span>
           </div>
           <div class='topbar-chips'>
             <div class='status-pill'><span>Region</span><strong>Huertgenwald, NRW</strong></div>
@@ -1160,7 +1160,7 @@ def decision_panel(sensor_id: str, zone: str, prediction: str, probability: floa
     st.markdown(
         "<div class='decision-panel'>"
         "<h4>Risk assessment</h4>"
-        f"<p>{escape(sensor_id)} at {escape(zone)} is the lead signal. Prediction is based on simulated sensor data.</p>"
+        f"<p>{escape(sensor_id)} at {escape(zone)} is the lead signal. The current model combines sensor readings with weather context.</p>"
         "<div class='chip-row'>"
         f"<span class='chip {chip_class}'>{escape(priority)} risk</span>"
         f"<span class='chip'>{probability:.0f}% probability</span>"
@@ -1288,7 +1288,7 @@ def temperature_alert(temp_c: float, source: str, threshold: float = 22.0) -> No
         st.markdown(
             "<div class='temp-alert'>"
             "<h4>Temperature alert</h4>"
-            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, above the demo threshold of "
+            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, above the configured alert threshold of "
             f"<strong>{threshold:.0f} C</strong>. Heat stress is increasing.</p>"
             "</div>",
             unsafe_allow_html=True,
@@ -1297,7 +1297,7 @@ def temperature_alert(temp_c: float, source: str, threshold: float = 22.0) -> No
         st.markdown(
             "<div class='temp-ok'>"
             "<h4>Temperature normal</h4>"
-            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, below the demo alert threshold.</p>"
+            f"<p>{escape(source)} is at <strong>{temp_c:.1f} C</strong>, below the configured alert threshold.</p>"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -1350,14 +1350,14 @@ with overview_tab:
     st.subheader("Mission View")
     metric_cards(
         [
-            ("MVP stack", "Sensors + weather"),
+            ("System focus", "Sensors + weather"),
             ("Target area", "Hürtgenwald"),
             ("Core signal", "Fire probability"),
             ("Data inputs", "Weather + sensors"),
         ]
     )
     insight(
-        "The demo combines simulated ground sensors with live NRW weather and fire-weather context."
+        "The current view combines ground-sensor signals with live NRW weather and fire-weather context."
     )
 
     left, right = st.columns(2)
@@ -1380,7 +1380,7 @@ with overview_tab:
         )
         html_table(flow)
 
-    note("Fire Prediction uses simulated sensor readings for demo. Live NRW uses live weather API calls and Copernicus EFFIS map layers.")
+    note("Fire Prediction currently uses sample sensor readings. Live NRW uses weather API calls and Copernicus EFFIS map layers.")
 
 with live_nrw_tab:
     st.subheader("Live NRW: Hürtgenwald")
@@ -1470,8 +1470,8 @@ with live_nrw_tab:
         st.image(effis_map_url("mf010.fwi"), use_container_width=True)
 
 with global_tab:
-    st.subheader("Global Fire-Weather Monitor")
-    st.write("PowerBI-style comparison for Germany, USA, and Canada.")
+    st.subheader("Regional Fire-Weather Monitor")
+    st.write("Operational comparison across monitored areas in Germany, USA, and Canada.")
 
     try:
         global_weather = load_global_fire_weather()
@@ -1479,8 +1479,8 @@ with global_tab:
 
         st.markdown(
             "<div class='bi-panel'>"
-            "<div class='bi-title'>Dashboard filters</div>"
-            "<div class='bi-subtitle'>Pick a country or state/province to focus the whole page.</div>"
+            "<div class='bi-title'>Filters</div>"
+            "<div class='bi-subtitle'>Focus the view by country, state or province, and monitoring location.</div>"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -1513,7 +1513,7 @@ with global_tab:
             selected_detail = st.selectbox("Trend detail", detail_options, key="global_area_detail")
 
         with filter_fourth:
-            card_limit_label = st.selectbox("Risk board", ["Top 8 areas", "Top 12 areas", "All areas"], key="global_card_limit")
+            card_limit_label = st.selectbox("Area board", ["Top 8 areas", "Top 12 areas", "All areas"], key="global_card_limit")
             card_limit = {"Top 8 areas": 8, "Top 12 areas": 12, "All areas": None}[card_limit_label]
 
         high_count = int(filtered_latest["risk"].isin(["High", "Critical"]).sum())
@@ -1525,7 +1525,7 @@ with global_tab:
         bi_kpi_cards(
             [
                 ("Highest risk", f"{highest_risk['risk']}", f"{highest_risk['area']} · {highest_risk['fire_weather_score']:.0f} score", highest_risk["risk"] in ["High", "Critical"]),
-                ("Areas monitored", f"{len(filtered_latest)}", f"{filtered_latest['country'].nunique()} countries in view", False),
+                ("Monitored areas", f"{len(filtered_latest)}", f"{filtered_latest['country'].nunique()} countries in view", False),
                 ("Temp alerts > 22 C", f"{temp_alerts}", f"Hottest: {hottest['area']} {hottest['temperature_c']:.1f} C", temp_alerts > 0),
                 ("High/Critical now", f"{high_count}", "Current forecast snapshot", high_count > 0),
                 ("Windiest area", f"{windiest['wind_kmh']:.1f} km/h", f"{windiest['area']} · from {windiest['wind_direction']}", False),
@@ -1535,7 +1535,7 @@ with global_tab:
             st.markdown(
                 "<div class='temp-alert'>"
                 "<h4>Temperature alert active</h4>"
-                f"<p>{temp_alerts} monitored area(s) are above 22 C. Use this as a demo alert threshold for field teams.</p>"
+                f"<p>{temp_alerts} monitored area(s) are above 22 C under the current alert configuration.</p>"
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1545,10 +1545,10 @@ with global_tab:
                 unsafe_allow_html=True,
             )
 
-        st.markdown("#### State / Area Risk Board")
+        st.markdown("#### Area Risk Board")
         st.caption("Cards are sorted by highest fire-weather score first.")
         global_area_board(filtered_latest, limit=card_limit)
-        insight("Use the country and area filters like PowerBI slicers. The board stays focused, while the matrix keeps the full selected dataset.")
+        insight("Use the filters to focus the operational view. The board highlights priority areas, while the matrix keeps the full selected dataset.")
 
         detail_country, detail_area, selected_site = [part.strip() for part in selected_detail.split("·", 2)]
         country_weather = global_weather[
@@ -1565,7 +1565,7 @@ with global_tab:
                 height=300,
             )
         with right_panel:
-            st.markdown("#### Country Summary")
+            st.markdown("#### Portfolio Summary")
             country_summary = (
                 filtered_latest.groupby("country", as_index=False)
                 .agg(
@@ -1578,7 +1578,7 @@ with global_tab:
                 .rename(columns={"country": "Country", "Avg_Temp_C": "Avg temp (C)", "Avg_Wind_kmh": "Avg wind (km/h)", "Max_Score": "Max score"})
             )
             html_table(round_numeric(country_summary), use_container_width=True, hide_index=True)
-            st.markdown("#### Area Coverage")
+            st.markdown("#### Coverage")
             coverage = (
                 latest_global.groupby("country", as_index=False)
                 .agg(Areas=("area", "nunique"))
@@ -1587,7 +1587,7 @@ with global_tab:
             )
             html_table(coverage, use_container_width=True, hide_index=True)
 
-        with st.expander("Area Risk Matrix", expanded=True):
+        with st.expander("Detailed Area Matrix", expanded=True):
             comparison = filtered_latest[
                 [
                     "country",
@@ -1618,19 +1618,19 @@ with global_tab:
                 }
             )
             html_table(round_numeric(comparison), use_container_width=True, hide_index=True)
-        note("Demo monitor uses representative areas, not full national grids. A production version should run scheduled gridded weather and fire-weather processing.")
+        note("Current coverage uses selected monitoring locations. National-scale deployment should use scheduled gridded weather and fire-weather processing.")
     except Exception as exc:
         st.error("Global monitor data is temporarily unavailable.")
         st.caption(str(exc))
 
 with sensor_demo_tab:
-    st.subheader("Fire Prediction Demo")
-    st.write("Sensor + weather view for early fire-risk detection.")
+    st.subheader("Fire Prediction")
+    st.write("Sensor and weather signals for early fire-risk detection.")
 
-    with st.expander("Demo settings"):
-        note("Demo data only. This shows how live sensor readings would become a fire-risk prediction.")
-        scenario = st.selectbox("Demo data mode", ["Fixed example", "New random reading"], key="sensor_scenario")
-    seed = 42 if scenario == "Fixed example" else int(pd.Timestamp.now().timestamp()) % 100000
+    with st.expander("Scenario settings"):
+        note("Sample sensor feed for presentation purposes. The same view can connect to live hardware readings.")
+        scenario = st.selectbox("Sensor feed", ["Fixed sample", "Refresh sample"], key="sensor_scenario")
+    seed = 42 if scenario == "Fixed sample" else int(pd.Timestamp.now().timestamp()) % 100000
     sensor_data = add_sensor_wind_columns(load_sensor_demo(seed))
     latest = sensor_data.sort_values("time").groupby("sensor_id", as_index=False).tail(1)
     highest = latest.sort_values("fire_probability_pct", ascending=False).iloc[0]
@@ -1701,10 +1701,10 @@ with sensor_demo_tab:
     with st.expander("Hotspot timeline"):
         st.markdown("#### Hotspot Timeline")
         if first_critical is None:
-            st.caption("The demo hotspot escalates as smoke, CO, and IR rise together.")
+            st.caption("The hotspot escalates as smoke, CO, and IR rise together.")
         else:
             st.caption(
-                f"Estimated fire-risk time: {format_signal_time(first_critical['time'])}. This is when the demo sensor first reaches critical risk."
+                f"Estimated fire-risk time: {format_signal_time(first_critical['time'])}. This is when the sensor first reaches critical risk in the sample feed."
             )
         hotspot_history = hotspot_rows.set_index("time")
         svg_line_chart(
