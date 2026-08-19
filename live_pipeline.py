@@ -263,15 +263,27 @@ def fetch_global_fire_weather() -> pd.DataFrame:
 
 def fetch_hurtgenwald_recent_weather(past_days: int = 14) -> pd.DataFrame:
     """Fetch recent hourly weather for incident review."""
+    return fetch_location_recent_weather(
+        {
+            "latitude": HURTGENWALD_LAT,
+            "longitude": HURTGENWALD_LON,
+            "timezone": "Europe/Berlin",
+        },
+        past_days,
+    )
+
+
+def fetch_location_recent_weather(location: dict, past_days: int = 14) -> pd.DataFrame:
+    """Fetch recent hourly weather for incident review."""
     days = max(1, min(int(past_days), 92))
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "latitude": HURTGENWALD_LAT,
-        "longitude": HURTGENWALD_LON,
+        "latitude": location["latitude"],
+        "longitude": location["longitude"],
         "hourly": ",".join(WEATHER_VARIABLES),
         "past_days": days,
         "forecast_days": 1,
-        "timezone": "Europe/Berlin",
+        "timezone": location["timezone"],
     }
     response = requests.get(url, params=params, timeout=20)
     response.raise_for_status()
@@ -280,14 +292,27 @@ def fetch_hurtgenwald_recent_weather(past_days: int = 14) -> pd.DataFrame:
 
 def fetch_hurtgenwald_archive_weather(start_date: date, end_date: date) -> pd.DataFrame:
     """Fetch older historical hourly weather from the archive API."""
+    return fetch_location_archive_weather(
+        {
+            "latitude": HURTGENWALD_LAT,
+            "longitude": HURTGENWALD_LON,
+            "timezone": "Europe/Berlin",
+        },
+        start_date,
+        end_date,
+    )
+
+
+def fetch_location_archive_weather(location: dict, start_date: date, end_date: date) -> pd.DataFrame:
+    """Fetch older historical hourly weather from the archive API."""
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
-        "latitude": HURTGENWALD_LAT,
-        "longitude": HURTGENWALD_LON,
+        "latitude": location["latitude"],
+        "longitude": location["longitude"],
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "hourly": ",".join(WEATHER_VARIABLES),
-        "timezone": "Europe/Berlin",
+        "timezone": location["timezone"],
         "wind_speed_unit": "kmh",
     }
     response = requests.get(url, params=params, timeout=30)
@@ -297,14 +322,27 @@ def fetch_hurtgenwald_archive_weather(start_date: date, end_date: date) -> pd.Da
 
 def fetch_hurtgenwald_history(start_date: date, end_date: date) -> tuple[pd.DataFrame, str]:
     """Choose recent or archive source based on requested dates."""
+    return fetch_location_history(
+        {
+            "latitude": HURTGENWALD_LAT,
+            "longitude": HURTGENWALD_LON,
+            "timezone": "Europe/Berlin",
+        },
+        start_date,
+        end_date,
+    )
+
+
+def fetch_location_history(location: dict, start_date: date, end_date: date) -> tuple[pd.DataFrame, str]:
+    """Choose recent or archive source based on requested dates."""
     today = date.today()
     if start_date >= today - timedelta(days=92):
-        weather = fetch_hurtgenwald_recent_weather((today - start_date).days + 1)
+        weather = fetch_location_recent_weather(location, (today - start_date).days + 1)
         mask = (weather["time"].dt.date >= start_date) & (weather["time"].dt.date <= end_date)
         return weather.loc[mask].copy(), "recent forecast API"
 
     archive_end = min(end_date, today - timedelta(days=5))
-    return fetch_hurtgenwald_archive_weather(start_date, archive_end), "historical archive API"
+    return fetch_location_archive_weather(location, start_date, archive_end), "historical archive API"
 
 
 def effis_map_url(

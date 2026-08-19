@@ -12,8 +12,7 @@ from live_pipeline import (
     GLOBAL_FIRE_LOCATIONS,
     effis_map_url,
     fetch_global_fire_weather,
-    fetch_hurtgenwald_history,
-    fetch_hurtgenwald_weather,
+    fetch_location_history,
     fetch_location_weather,
     risk_label,
 )
@@ -317,6 +316,27 @@ st.markdown(
     }
     @media (max-width: 1000px) {
         .bi-layout { grid-template-columns: 1fr; }
+    }
+    .control-panel {
+        background:
+            linear-gradient(135deg, rgba(8,47,73,0.86), rgba(20,83,45,0.72)),
+            radial-gradient(circle at 92% 10%, rgba(248,113,113,0.22), transparent 28%);
+        border: 1px solid rgba(125,211,252,0.22);
+        border-left: 5px solid #22c55e;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin: 10px 0 14px 0;
+        color: #f8fafc;
+        box-shadow: 0 18px 38px rgba(2,6,23,0.30);
+    }
+    .control-panel strong {
+        display: block;
+        font-size: 1.02rem;
+        margin-bottom: 4px;
+    }
+    .control-panel span {
+        color: #cbd5e1;
+        font-size: 0.9rem;
     }
     .metric-grid {
         display: grid;
@@ -747,13 +767,15 @@ def add_fire_weather_columns(frame: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 
-@st.cache_data(ttl=1800)
-def load_hurtgenwald_weather() -> pd.DataFrame:
-    return fetch_hurtgenwald_weather()
-
-
 def germany_live_locations() -> list[dict]:
     return [location for location in GLOBAL_FIRE_LOCATIONS if location["country"] == "Germany"]
+
+
+def germany_location_options() -> dict[str, dict]:
+    return {
+        f"{location['area']} · {location['site']}": location
+        for location in germany_live_locations()
+    }
 
 
 @st.cache_data(ttl=1800)
@@ -763,6 +785,15 @@ def load_selected_location_weather(area: str, site: str) -> pd.DataFrame:
         if item["country"] == "Germany" and item["area"] == area and item["site"] == site
     )
     return fetch_location_weather(location)
+
+
+@st.cache_data(ttl=3600)
+def load_selected_location_history(area: str, site: str, start_date, end_date) -> tuple[pd.DataFrame, str]:
+    location = next(
+        item for item in GLOBAL_FIRE_LOCATIONS
+        if item["country"] == "Germany" and item["area"] == area and item["site"] == site
+    )
+    return fetch_location_history(location, start_date, end_date)
 
 
 @st.cache_data(ttl=1800)
@@ -783,11 +814,6 @@ def prepare_global_weather(frame: pd.DataFrame) -> pd.DataFrame:
     if "spread_direction" not in prepared.columns and "wind_direction_deg" in prepared.columns:
         prepared["spread_direction"] = prepared["wind_direction_deg"].apply(lambda value: degrees_to_compass((float(value) + 180) % 360))
     return prepared
-
-
-@st.cache_data(ttl=3600)
-def load_hurtgenwald_history(start_date, end_date):
-    return fetch_hurtgenwald_history(start_date, end_date)
 
 
 @st.cache_data(ttl=300)
@@ -1409,11 +1435,11 @@ with live_nrw_tab:
     st.caption("Weather feed: Open-Meteo forecast. Fire danger map: Copernicus EFFIS WMS.")
 
     try:
-        germany_locations = germany_live_locations()
-        location_labels = {
-            f"{location['area']} · {location['site']}": location
-            for location in germany_locations
-        }
+        st.markdown(
+            "<div class='control-panel'><strong>Live region selection</strong><span>Choose a Germany monitoring area to update forecast, wind, rule checks, and EFFIS map.</span></div>",
+            unsafe_allow_html=True,
+        )
+        location_labels = germany_location_options()
         selected_location_label = st.selectbox(
             "Germany region",
             list(location_labels.keys()),
@@ -1759,17 +1785,31 @@ with sensor_demo_tab:
 
 with historical_nrw_tab:
     st.subheader("Historical Risk Review")
-    st.write("Review past weather conditions around an incident window.")
-    st.caption("Current case study: Hürtgenwald, North Rhine-Westphalia.")
+    st.write("Review past weather conditions around an incident window for selected Germany regions.")
+    st.caption("Use this to understand whether heat, low humidity, wind, and rain patterns supported fire spread.")
 
     default_end = pd.Timestamp.today().date()
     default_start = default_end - pd.Timedelta(days=14)
-    selected = st.date_input(
-        "Incident window",
-        (default_start, default_end),
-        max_value=default_end,
-        key="historical_nrw_window",
+    st.markdown(
+        "<div class='control-panel'><strong>Incident review controls</strong><span>Select a region and date window to reconstruct fire-weather conditions.</span></div>",
+        unsafe_allow_html=True,
     )
+    history_left, history_right = st.columns([1.15, 1])
+    with history_left:
+        history_location_labels = germany_location_options()
+        selected_history_label = st.selectbox(
+            "Germany region",
+            list(history_location_labels.keys()),
+            key="historical_germany_region",
+        )
+        selected_history_location = history_location_labels[selected_history_label]
+    with history_right:
+        selected = st.date_input(
+            "Incident window",
+            (default_start, default_end),
+            max_value=default_end,
+            key="historical_nrw_window",
+        )
     if isinstance(selected, tuple) and len(selected) == 2:
         hist_start, hist_end = selected
     else:
@@ -1779,7 +1819,12 @@ with historical_nrw_tab:
         st.error("Start date must be before end date.")
     else:
         try:
-            history, source_name = load_hurtgenwald_history(hist_start, hist_end)
+            history, source_name = load_selected_location_history(
+                selected_history_location["area"],
+                selected_history_location["site"],
+                hist_start,
+                hist_end,
+            )
             if history.empty:
                 st.warning("No historical rows returned for this date range.")
             else:
@@ -1792,6 +1837,8 @@ with historical_nrw_tab:
 
                 metric_cards(
                     [
+                        ("Region", selected_history_location["area"]),
+                        ("Site", selected_history_location["site"]),
                         ("Data source", source_name),
                         ("30-30-30 hours", f"{full_rule_hours}"),
                         ("Near-risk hours", f"{near_risk_hours}"),
@@ -1807,13 +1854,14 @@ with historical_nrw_tab:
 
                 left, right = st.columns([2, 1])
                 with left:
-                    st.markdown("#### Weather Before And During The Incident")
+                    st.markdown("#### Incident-Window Weather")
+                    st.caption(f"{selected_history_location['site']} · {hist_start:%d %b %Y} to {hist_end:%d %b %Y}")
                     svg_line_chart(
                         history.set_index("time")[["temperature_c", "humidity_pct", "wind_kmh", "rain_mm"]],
                         height=360,
                     )
                 with right:
-                    st.markdown("#### Rule Checks")
+                    st.markdown("#### Fire-Weather Rule Checks")
                     rule_counts = pd.Series(
                         {
                             "Temp >= 30 C": int((history["temperature_c"] >= 30).sum()),
@@ -1825,7 +1873,7 @@ with historical_nrw_tab:
                     svg_bar_chart(rule_counts, height=360)
 
                 st.markdown("#### Wind Direction")
-                st.caption("Useful for reconstructing likely spread direction.")
+                st.caption(f"Dominant wind directions for {selected_history_location['site']} during the selected window.")
                 svg_bar_chart(direction_counts(history, "wind_direction"), height=260)
 
                 daily_history = (
