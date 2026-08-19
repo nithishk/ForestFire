@@ -381,6 +381,15 @@ st.markdown(
         margin: 8px 0 18px 0;
         box-shadow: 0 22px 48px rgba(2,6,23,0.34);
     }
+    .product-hero-grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1.15fr) minmax(300px, 0.85fr);
+        gap: 20px;
+        align-items: center;
+    }
+    @media (max-width: 980px) {
+        .product-hero-grid { grid-template-columns: 1fr; }
+    }
     .product-kicker {
         color: #86efac;
         font-size: 0.82rem;
@@ -422,6 +431,111 @@ st.markdown(
     .product-stat strong {
         display: block;
         font-size: 1.15rem;
+    }
+    .demo-console {
+        background: rgba(248,250,252,0.96);
+        border: 1px solid rgba(226,232,240,0.84);
+        border-radius: 16px;
+        padding: 14px;
+        color: #10212f;
+        box-shadow: 0 22px 42px rgba(2,6,23,0.26);
+    }
+    .console-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .console-title strong {
+        display: block;
+        font-size: 0.98rem;
+    }
+    .console-title span {
+        display: block;
+        color: #64748b;
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+    .console-badge {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 999px;
+        padding: 6px 9px;
+        font-size: 0.76rem;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+    .console-map {
+        position: relative;
+        height: 210px;
+        border-radius: 12px;
+        overflow: hidden;
+        background:
+            linear-gradient(135deg, rgba(22,101,52,0.20), transparent 36%),
+            linear-gradient(45deg, #dbeafe 0 18%, #dcfce7 18% 45%, #fef9c3 45% 62%, #fee2e2 62% 100%);
+        border: 1px solid #d8e2ec;
+        margin-bottom: 12px;
+    }
+    .console-road {
+        position: absolute;
+        height: 2px;
+        background: rgba(71,85,105,0.40);
+        transform-origin: left center;
+    }
+    .road-a { width: 72%; left: 12%; top: 42%; transform: rotate(-18deg); }
+    .road-b { width: 62%; left: 25%; top: 62%; transform: rotate(20deg); }
+    .road-c { width: 44%; left: 38%; top: 28%; transform: rotate(52deg); }
+    .hotspot {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        left: 58%;
+        top: 44%;
+        border-radius: 999px;
+        background: #dc2626;
+        border: 6px solid rgba(254,202,202,0.92);
+        box-shadow: 0 0 0 12px rgba(220,38,38,0.12);
+    }
+    .wind-arrow {
+        position: absolute;
+        left: 62%;
+        top: 52%;
+        width: 84px;
+        height: 3px;
+        background: #2563eb;
+        transform: rotate(-35deg);
+    }
+    .wind-arrow:after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: -5px;
+        border-left: 10px solid #2563eb;
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+    }
+    .console-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .console-metric {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 9px;
+    }
+    .console-metric span {
+        display: block;
+        color: #64748b;
+        font-size: 0.72rem;
+        margin-bottom: 4px;
+    }
+    .console-metric strong {
+        display: block;
+        font-size: 0.95rem;
     }
     .phase-grid,
     .feature-grid {
@@ -472,6 +586,41 @@ st.markdown(
         padding: 16px;
         color: #12382a;
         margin: 10px 0 18px 0;
+    }
+    .demo-step-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin: 10px 0 18px 0;
+    }
+    .demo-step {
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid rgba(148,163,184,0.25);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 14px 30px rgba(2,6,23,0.20);
+    }
+    .demo-step span {
+        display: inline-flex;
+        width: 26px;
+        height: 26px;
+        align-items: center;
+        justify-content: center;
+        background: #22c55e;
+        color: #052e16;
+        border-radius: 999px;
+        font-weight: 900;
+        margin-bottom: 9px;
+    }
+    .demo-step h4 {
+        margin: 0 0 6px 0;
+        font-size: 1rem;
+    }
+    .demo-step p {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 0.9rem;
     }
     .metric-grid {
         display: grid;
@@ -1629,17 +1778,39 @@ def product_demo_page() -> None:
     st.markdown(
         """
         <div class='product-hero'>
-          <div class='product-kicker'>CTRL-F Fire Prediction Alerts</div>
-          <h2>Detect risk early. Alert field teams. Support faster response.</h2>
-          <p>
-            CTRL-F brings sensor signals, live weather, wind direction, and fire-weather history into one
-            operational workspace for teams monitoring high-risk landscapes.
-          </p>
-          <div class='product-stats'>
-            <div class='product-stat'><span>Signals</span><strong>Smoke · CO · IR · Weather</strong></div>
-            <div class='product-stat'><span>Weather</span><strong>Live forecasts + history</strong></div>
-            <div class='product-stat'><span>Coverage</span><strong>Germany · USA · Canada</strong></div>
-            <div class='product-stat'><span>Output</span><strong>Risk score + action brief</strong></div>
+          <div class='product-hero-grid'>
+            <div>
+              <div class='product-kicker'>CTRL-F Fire Prediction Alerts</div>
+              <h2>Detect risk early. Alert field teams. Coordinate response.</h2>
+              <p>
+                A product demo for wildfire operations: sensor signals, live weather, wind direction,
+                regional fire-weather maps, and historical review in one command-ready workspace.
+              </p>
+              <div class='product-stats'>
+                <div class='product-stat'><span>Inputs</span><strong>Sensors + weather</strong></div>
+                <div class='product-stat'><span>Output</span><strong>Risk + response brief</strong></div>
+                <div class='product-stat'><span>Coverage</span><strong>Germany · USA · Canada</strong></div>
+                <div class='product-stat'><span>Use</span><strong>Before · During · After</strong></div>
+              </div>
+            </div>
+            <div class='demo-console'>
+              <div class='console-top'>
+                <div class='console-title'><strong>Live operations snapshot</strong><span>Selected monitoring area</span></div>
+                <div class='console-badge'>Alert ready</div>
+              </div>
+              <div class='console-map'>
+                <div class='console-road road-a'></div>
+                <div class='console-road road-b'></div>
+                <div class='console-road road-c'></div>
+                <div class='hotspot'></div>
+                <div class='wind-arrow'></div>
+              </div>
+              <div class='console-grid'>
+                <div class='console-metric'><span>Risk</span><strong>High</strong></div>
+                <div class='console-metric'><span>Wind</span><strong>SW -> NE</strong></div>
+                <div class='console-metric'><span>Action</span><strong>Brief sent</strong></div>
+              </div>
+            </div>
           </div>
         </div>
         """,
@@ -1662,6 +1833,23 @@ def product_demo_page() -> None:
     )
     st.markdown(f"<div class='phase-grid'>{phase_html}</div>", unsafe_allow_html=True)
 
+    st.markdown("#### Live Demo Flow")
+    steps = [
+        ("1", "Predict", "Open Fire Prediction to see how sensor readings become a fire-probability signal."),
+        ("2", "Verify", "Open Live Weather to check temperature, humidity, wind, 30-30-30 rules, and EFFIS map context."),
+        ("3", "Prioritize", "Open Regional Monitor to compare monitored areas and focus the response queue."),
+        ("4", "Report", "Open Historical Risk to review an incident window and download a summary brief."),
+    ]
+    step_html = "".join(
+        "<div class='demo-step'>"
+        f"<span>{escape(number)}</span>"
+        f"<h4>{escape(title)}</h4>"
+        f"<p>{escape(body)}</p>"
+        "</div>"
+        for number, title, body in steps
+    )
+    st.markdown(f"<div class='demo-step-grid'>{step_html}</div>", unsafe_allow_html=True)
+
     st.markdown("#### Platform Capabilities")
     features = [
         ("Live weather alerts", "Select Germany regions and track current temperature, humidity, rain, wind, and spread direction."),
@@ -1682,7 +1870,7 @@ def product_demo_page() -> None:
     st.markdown(f"<div class='feature-grid'>{feature_html}</div>", unsafe_allow_html=True)
 
     st.markdown(
-        "<div class='demo-cta'><strong>Demo path:</strong> Start with Fire Prediction, then open Live Weather for a selected Germany region, and finish with Regional Monitor or Historical Risk for wider context.</div>",
+        "<div class='demo-cta'><strong>Client takeaway:</strong> CTRL-F is not just a weather dashboard. It is a response workflow: detect the signal, verify conditions, prioritize regions, and export a clear field brief.</div>",
         unsafe_allow_html=True,
     )
 
